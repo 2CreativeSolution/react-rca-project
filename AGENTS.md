@@ -49,6 +49,8 @@ Auth: Salesforce auth
 - TypeScript strict
 - ESLint enforced
 - Reusable components
+- Styling: Tailwind-first. Use Tailwind utility classes for all UI styling.
+  - Avoid adding new custom CSS in `src/index.css` / `src/App.css` unless there is a clear, documented reason.
 
 ## AI Behavior
 - Ask before assumptions

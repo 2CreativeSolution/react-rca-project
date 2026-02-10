@@ -1,24 +1,40 @@
-import { Link } from "react-router-dom";
+import { Box, Container, Link, Stack, Typography } from "@mui/material";
+import { Link as RouterLink } from "react-router-dom";
 
 export default function Footer() {
   return (
-    <footer className="border-t bg-gray-50">
-      <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 py-6 text-sm text-gray-600 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-gray-700">© 2026 React RCA</p>
+    <Box
+      component="footer"
+      sx={{
+        borderTop: 1,
+        borderColor: "divider",
+        bgcolor: "background.paper",
+      }}
+    >
+      <Container sx={{ py: 3 }}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          justifyContent="space-between"
+        >
+          <Typography variant="body2" color="text.secondary">
+            © 2026 React RCA
+          </Typography>
 
-        <nav className="flex flex-wrap gap-4">
-          <Link to="/terms" className="hover:underline">
-            Terms
-          </Link>
-          <Link to="/privacy" className="hover:underline">
-            Privacy
-          </Link>
-          <Link to="/contact" className="hover:underline">
-            Contact
-          </Link>
-        </nav>
-      </div>
-    </footer>
+          <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap">
+            <Link component={RouterLink} to="/terms" underline="hover" color="text.secondary">
+              Terms
+            </Link>
+            <Link component={RouterLink} to="/privacy" underline="hover" color="text.secondary">
+              Privacy
+            </Link>
+            <Link component={RouterLink} to="/contact" underline="hover" color="text.secondary">
+              Contact
+            </Link>
+          </Stack>
+        </Stack>
+      </Container>
+    </Box>
   );
 }
-

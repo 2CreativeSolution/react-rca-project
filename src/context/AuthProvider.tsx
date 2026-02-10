@@ -1,19 +1,23 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { AuthContext } from "./AuthContext";
-import type { AuthContextType } from "./authTypes";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
-  const value: AuthContextType = {
-    isLoggedIn,
-    login: () => setIsLoggedIn(true),
-    logout: () => setIsLoggedIn(false),
+  const logout = () => {
+    setAccessToken(null);
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider
+      value={{
+        isLoggedIn: !!accessToken,
+        accessToken,
+        setAccessToken,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

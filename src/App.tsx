@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthProvider";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import MainLayout from "./layout/MainLayout";
+import OAuthCallback from "./pages/OAuthCallback";
 
 /* Public pages */
 import Landing from "./pages/Landing";
@@ -36,6 +37,7 @@ function App() {
             <Route path="/contact" element={<Contact />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/oauth/callback" element={<OAuthCallback />} />
 
             {/* ================= PROTECTED ROUTES ================= */}
             <Route

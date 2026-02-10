@@ -49,8 +49,12 @@ Auth: Salesforce auth
 - TypeScript strict
 - ESLint enforced
 - Reusable components
-- Styling: Tailwind-first. Use Tailwind utility classes for all UI styling.
-  - Avoid adding new custom CSS in `src/index.css` / `src/App.css` unless there is a clear, documented reason.
+- Styling: MUI-first. Use MUI components + theme tokens for UI.
+  - Avoid mixing Tailwind utility classes into new UI work.
+  - Keep global CSS minimal (`src/index.css` resets only).
+
+## UI Framework Reference
+Follow `UI_FRAMEWORK.md` for the full MUI-first UI rules, theming standards, layout patterns, and component conventions.
 
 ## AI Behavior
 - Ask before assumptions

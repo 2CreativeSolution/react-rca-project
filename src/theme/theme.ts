@@ -5,7 +5,6 @@ export const theme = createTheme({
   palette: {
     mode: "light",
     primary: {
-      // Modern commerce (soft) + blue CTA.
       main: "#2563EB",
       dark: "#1D4ED8",
       light: "#60A5FA",
@@ -14,7 +13,6 @@ export const theme = createTheme({
       main: "#111827",
     },
     background: {
-      // Warm-ish neutral background to feel less "dashboard".
       default: "#FAFAF9",
       paper: "#FFFFFF",
     },

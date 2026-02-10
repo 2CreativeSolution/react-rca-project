@@ -23,4 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 .env
-build
+build/
+
+# Local tracking docs (do not commit)
+docs/

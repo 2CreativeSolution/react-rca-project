@@ -64,25 +64,38 @@ export default function Landing() {
       {/* TOP PROMO BANNER (in-container, calmer UX than full-bleed) */}
       <Alert
         severity="info"
+        action={
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 700,
+              whiteSpace: "nowrap",
+              mt: 0,
+              lineHeight: 1.4,
+              color: "text.secondary",
+            }}
+          >
+            T&amp;Cs apply.
+          </Typography>
+        }
         sx={{
           borderRadius: 4,
           border: 1,
           borderColor: "divider",
           bgcolor: "background.paper",
+          px: 2.5,
           py: 0.75,
           alignItems: "center",
           "& .MuiAlert-message": { py: 0 },
           "& .MuiAlert-icon": { py: 0.25, mr: 1 },
+          "& .MuiAlert-action": { alignItems: "center", py: 0, mr: 0, pr: 0 },
         }}
       >
         <Typography variant="body2">
           <Box component="span" sx={{ fontWeight: 800 }}>
             Limited time offer:
           </Box>{" "}
-          Get up to $150 off on new connections.{" "}
-          <Box component="span" sx={{ fontWeight: 700 }}>
-            T&amp;Cs apply.
-          </Box>
+          Get up to $150 off on new connections.
         </Typography>
       </Alert>
 

@@ -19,7 +19,7 @@ export default function Footer() {
           justifyContent="space-between"
         >
           <Typography variant="body2" color="text.secondary">
-            © 2026 React RCA
+            © 2026 RCA
           </Typography>
 
           <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap">

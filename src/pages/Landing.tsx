@@ -1,7 +1,58 @@
+import {
+  Alert,
+  Box,
+  Button,
+  Stack,
+  Tab,
+  Tabs,
+  Typography,
+} from "@mui/material";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import OfferCard from "../components/ui/OfferCard";
+import ProductCard from "../components/ui/ProductCard";
+
+type Offer = {
+  title: string;
+  desc: string;
+};
+
+type Service = {
+  name: string;
+  desc: string;
+  price: string;
+};
+
+type Plan = {
+  name: string;
+  desc: string;
+  price: string;
+};
+
+// TODO: Replace these with API-driven values (Salesforce).
+const OFFERS: Offer[] = [
+  { title: "Internet + TV Combo", desc: "Save $120 on annual subscription" },
+  { title: "Unlimited Calling", desc: "First 3 months free" },
+  { title: "Family Plans", desc: "Up to 4 lines with shared data" },
+];
+
+const SERVICES: Service[] = [
+  { name: "Mobile Plans", desc: "Unlimited calls & data", price: "$45 / month" },
+  { name: "Home Internet", desc: "Up to 1 Gbps speed", price: "$60 / month" },
+  { name: "TV & Streaming", desc: "150+ channels included", price: "$40 / month" },
+];
+
+const BEST_SELLERS: Plan[] = [
+  { name: "All-In-One Max", desc: "Mobile + Internet + TV", price: "$99 / month" },
+  { name: "Unlimited Plus", desc: "Best for families & streaming", price: "$79 / month" },
+];
 
 export default function Landing() {
   const navigate = useNavigate();
+  const [catalogTab, setCatalogTab] = useState<0 | 1>(0);
+
+  const sectionPx = { xs: 3, md: 6 } as const;
+  const cardColMax = 360;
 
   const handleAddToCart = () => {
     // until auth is ready, always redirect to login
@@ -9,152 +60,158 @@ export default function Landing() {
   };
 
   return (
-    <div className="bg-gray-50 w-full">
-
-      {/* TOP PROMO BANNER */}
-      <div className="bg-blue-900 text-white text-sm">
-        <div className="max-w-7xl mx-auto px-6 py-2 flex justify-between">
-          <span>🔥 Limited time offer: Get up to $150 off on new connections</span>
-          <span className="font-medium">T&Cs Apply</span>
-        </div>
-      </div>
+    <Stack spacing={4}>
+      {/* TOP PROMO BANNER (in-container, calmer UX than full-bleed) */}
+      <Alert
+        severity="info"
+        sx={{
+          borderRadius: 4,
+          border: 1,
+          borderColor: "divider",
+          bgcolor: "background.paper",
+          py: 0.75,
+          alignItems: "center",
+          "& .MuiAlert-message": { py: 0 },
+          "& .MuiAlert-icon": { py: 0.25, mr: 1 },
+        }}
+      >
+        <Typography variant="body2">
+          <Box component="span" sx={{ fontWeight: 800 }}>
+            Limited time offer:
+          </Box>{" "}
+          Get up to $150 off on new connections.{" "}
+          <Box component="span" sx={{ fontWeight: 700 }}>
+            T&amp;Cs apply.
+          </Box>
+        </Typography>
+      </Alert>
 
       {/* HERO SECTION */}
-      <section className="bg-gradient-to-r from-blue-600 to-blue-500 text-white">
-        <div className="max-w-7xl mx-auto px-6 py-20">
-          <h1 className="text-4xl font-bold mb-4">
+      <Box
+        sx={{
+          borderRadius: 6,
+          px: sectionPx,
+          py: { xs: 4, md: 6 },
+          border: 1,
+          borderColor: "divider",
+          bgcolor: "background.paper",
+          background:
+            "radial-gradient(1200px 400px at 10% 0%, rgba(37,99,235,0.18) 0%, rgba(250,250,249,0) 60%), radial-gradient(900px 300px at 100% 30%, rgba(249,115,22,0.10) 0%, rgba(250,250,249,0) 55%)",
+        }}
+      >
+        <Stack spacing={2} sx={{ maxWidth: 820 }}>
+          <Typography variant="h3" sx={{ lineHeight: 1.05 }}>
             One connection for everything you need
-          </h1>
-          <p className="text-lg mb-8 max-w-2xl">
-            High-speed internet, unlimited calling, and premium TV —
-            all in one simple plan.
-          </p>
-          <button
-            onClick={() => navigate("/login")}
-            className="bg-white text-blue-700 px-6 py-3 rounded-md font-semibold"
-          >
-            View Plans
-          </button>
-        </div>
-      </section>
+          </Typography>
+          <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 500 }}>
+            High-speed internet, unlimited calling, and premium TV, all in one simple plan.
+          </Typography>
+
+          <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap" sx={{ pt: 1 }}>
+            <Button variant="contained" onClick={() => navigate("/login")}>
+              View Plans
+            </Button>
+            <Button variant="outlined" onClick={() => navigate("/products")}>
+              Browse products
+            </Button>
+          </Stack>
+        </Stack>
+      </Box>
 
       {/* DISCOUNTS SECTION */}
-      <section className="max-w-7xl mx-auto px-6 py-12">
-        <h2 className="text-2xl font-semibold mb-6">Exclusive Online Offers</h2>
+      <Box component="section" sx={{ px: sectionPx }}>
+        <Typography variant="h5" sx={{ mb: 2 }}>
+          Exclusive Online Offers
+        </Typography>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[
-            {
-              title: "Internet + TV Combo",
-              desc: "Save $120 on annual subscription",
+        <Box
+          sx={{
+            display: "grid",
+            gap: 2,
+            justifyContent: "flex-start",
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm: `repeat(2, minmax(0px, ${cardColMax}px))`,
+              md: `repeat(3, minmax(0px, ${cardColMax}px))`,
             },
-            {
-              title: "Unlimited Calling",
-              desc: "First 3 months free",
-            },
-            {
-              title: "Family Plans",
-              desc: "Up to 4 lines with shared data",
-            },
-          ].map((offer, idx) => (
-            <div
-              key={idx}
-              className="bg-white border rounded-lg p-6"
-            >
-              <h3 className="font-semibold mb-2">{offer.title}</h3>
-              <p className="text-sm text-gray-600 mb-4">{offer.desc}</p>
-              <button
-                onClick={handleAddToCart}
-                className="text-blue-600 font-medium text-sm"
-              >
-                Get Offer →
-              </button>
-            </div>
+          }}
+        >
+          {OFFERS.map((offer) => (
+            <OfferCard
+              key={offer.title}
+              title={offer.title}
+              description={offer.desc}
+              onAction={handleAddToCart}
+            />
           ))}
-        </div>
-      </section>
+        </Box>
+      </Box>
 
-      {/* OUR SERVICES */}
-      <section className="max-w-7xl mx-auto px-6 py-12">
-        <h2 className="text-2xl font-semibold mb-6">Our Services</h2>
+      {/* SERVICES + PLANS (Tabbed) */}
+      <Box component="section" sx={{ px: sectionPx }}>
+        <Typography variant="h5" sx={{ mb: 1 }}>
+          Explore
+        </Typography>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[
-            {
-              name: "Mobile Plans",
-              desc: "Unlimited calls & data",
-              price: "$45 / month",
-            },
-            {
-              name: "Home Internet",
-              desc: "Up to 1 Gbps speed",
-              price: "$60 / month",
-            },
-            {
-              name: "TV & Streaming",
-              desc: "150+ channels included",
-              price: "$40 / month",
-            },
-          ].map((service, idx) => (
-            <div
-              key={idx}
-              className="bg-white rounded-lg shadow-sm p-6"
-            >
-              <h3 className="font-semibold mb-2">{service.name}</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                {service.desc}
-              </p>
-              <div className="font-semibold mb-4">{service.price}</div>
-              <button
-                onClick={handleAddToCart}
-                className="w-full bg-blue-600 text-white py-2 rounded-md text-sm"
-              >
-                Add to Cart
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
+        <Tabs
+          value={catalogTab}
+          onChange={(_, next) => setCatalogTab(next)}
+          sx={{ mb: 2 }}
+        >
+          <Tab label="Services" value={0} />
+          <Tab label="Best Selling Plans" value={1} />
+        </Tabs>
 
-      {/* BEST SELLING PLANS */}
-      <section className="max-w-7xl mx-auto px-6 py-12">
-        <h2 className="text-2xl font-semibold mb-6">Best Selling Plans</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {[
-            {
-              name: "All-In-One Max",
-              desc: "Mobile + Internet + TV",
-              price: "$99 / month",
-            },
-            {
-              name: "Unlimited Plus",
-              desc: "Best for families & streaming",
-              price: "$79 / month",
-            },
-          ].map((plan, idx) => (
-            <div
-              key={idx}
-              className="bg-white border rounded-lg p-6 flex justify-between items-center"
-            >
-              <div>
-                <h3 className="font-semibold">{plan.name}</h3>
-                <p className="text-sm text-gray-600">{plan.desc}</p>
-              </div>
-              <div className="text-right">
-                <div className="font-semibold mb-2">{plan.price}</div>
-                <button
-                  onClick={handleAddToCart}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm"
-                >
-                  Add to Cart
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-    </div>
+        {catalogTab === 0 ? (
+          <Box
+            sx={{
+              display: "grid",
+              gap: 2,
+              justifyContent: "flex-start",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: `repeat(2, minmax(0px, ${cardColMax}px))`,
+                md: `repeat(3, minmax(0px, ${cardColMax}px))`,
+              },
+            }}
+          >
+            {SERVICES.map((service) => (
+              <ProductCard
+                key={service.name}
+                title={service.name}
+                description={service.desc}
+                price={service.price}
+                onCta={handleAddToCart}
+                height={240}
+              />
+            ))}
+          </Box>
+        ) : (
+          <Box
+            sx={{
+              display: "grid",
+              gap: 2,
+              justifyContent: "flex-start",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: `repeat(2, minmax(0px, ${cardColMax}px))`,
+                md: `repeat(3, minmax(0px, ${cardColMax}px))`,
+              },
+            }}
+          >
+            {BEST_SELLERS.map((plan) => (
+              <ProductCard
+                key={plan.name}
+                title={plan.name}
+                description={plan.desc}
+                price={plan.price}
+                onCta={handleAddToCart}
+                height={240}
+              />
+            ))}
+          </Box>
+        )}
+      </Box>
+    </Stack>
   );
 }

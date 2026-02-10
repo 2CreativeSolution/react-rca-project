@@ -1,73 +1,54 @@
-# React + TypeScript + Vite
+# React RCA (Ecommerce Case Study)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Pure React (Vite) frontend that demonstrates building an ecommerce-style UI while consuming Salesforce backend APIs (no backend in this repo).
 
-Currently, two official plugins are available:
+## Quick Start
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```sh
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Then open the URL Vite prints (typically `http://localhost:5173`).
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Scripts
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```sh
+npm run dev
+npm run lint
+npm run lint:fix
+npm run build
+npm run preview
 ```
+
+## Project Rules (Read These First)
+
+- Agent/development rules: `AGENTS.md`
+- UI standardization (MUI-first): `UI_FRAMEWORK.md`
+
+## Architecture (High Level)
+
+- This is a **client-only** app. It will consume Salesforce APIs directly.
+- Routing is defined in `src/App.tsx`.
+- Auth is currently a stub (`src/context/*`) and will evolve to Salesforce auth + persistence.
+- UI should follow the MUI-first conventions in `UI_FRAMEWORK.md`.
+
+## Folder Structure
+
+Key folders/files:
+
+- `src/pages/`: route pages (thin)
+- `src/components/`: reusable UI and domain components
+- `src/layout/`: app chrome (header/footer/layout)
+- `src/context/`: app state (auth)
+- `src/routes/`: route utilities (e.g. `ProtectedRoute`)
+
+Planned (to be added as features are built):
+
+- `src/api/`: typed API client layer (Salesforce requests, error normalization)
+- `src/services/`: business logic layer (orchestration, no UI imports)
+
+## Notes
+
+- If you add a new UI pattern more than once, it should become a shared component or a theme override (see `UI_FRAMEWORK.md`).
+- Keep the app data-driven (avoid hardcoding values that should come from APIs).

@@ -63,7 +63,7 @@ export default function OfferCard({
         <Box sx={{ flex: 1 }} />
       </CardContent>
 
-      <CardActions sx={{ mt: "auto", px: 3, pb: 3, pt: 0, justifyContent: "flex-end" }}>
+      <CardActions sx={{ mt: "auto", px: 3, pb: 3, pt: 0, justifyContent: "flex-start" }}>
         <Button onClick={onAction} size="medium">
           {ctaLabel}
         </Button>

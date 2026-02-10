@@ -59,7 +59,7 @@ export default function ProductCard({
           px: 3,
           pb: 3,
           pt: 0,
-          justifyContent: "flex-end",
+          justifyContent: "flex-start",
         }}
       >
         <Button onClick={onCta} variant="contained" color="primary" size="medium">

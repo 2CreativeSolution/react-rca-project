@@ -32,7 +32,7 @@ export default function ProductLanding() {
         setCatalogs(result.catalogs || []);
       })
       .catch(err => setError(err.message));
-  }, []);
+  }, [accessToken]);
 
   if (error) {
     return <div className="text-red-600">Error: {error}</div>;

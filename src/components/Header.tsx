@@ -1,52 +1,137 @@
-import { Link } from "react-router-dom";
+import { AppBar, Box, Button, Container, Toolbar, Typography } from "@mui/material";
+import { Link as RouterLink } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
+import logo from "../assets/logo.jpg";
 
 export default function Header() {
   const { isLoggedIn, logout } = useAuth();
 
   return (
-    <header className="sticky top-0 z-10 border-b bg-white/90 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
-        <Link to="/" className="text-lg font-semibold tracking-tight">
-          React RCA
-        </Link>
-
-        <nav className="flex flex-wrap items-center gap-4 text-sm">
-          <Link to="/" className="hover:underline">
-            Home
-          </Link>
-          <Link to="/products" className="hover:underline">
-            Products
-          </Link>
-          <Link to="/cart" className="hover:underline">
-            Cart
-          </Link>
-          <Link to="/dashboard" className="hover:underline">
-            Dashboard
-          </Link>
-          <Link to="/settings" className="hover:underline">
-            Settings
-          </Link>
-
-          {isLoggedIn ? (
-            <button
-              type="button"
-              onClick={logout}
-              className="rounded bg-gray-900 px-3 py-1.5 font-medium text-white hover:bg-gray-800"
+    <AppBar
+      position="sticky"
+      elevation={0}
+      sx={{
+        bgcolor: "background.paper",
+        color: "text.primary",
+        borderBottom: 1,
+        borderColor: "divider",
+      }}
+    >
+      <Toolbar disableGutters sx={{ minHeight: 64 }}>
+        <Container
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 2,
+            py: 1.25,
+          }}
+        >
+          <Box
+            component={RouterLink}
+            to="/"
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1.25,
+              textDecoration: "none",
+              color: "text.primary",
+              minWidth: 0,
+            }}
+          >
+            <Box
+              component="img"
+              src={logo}
+              alt="React RCA"
+              sx={{
+                height: 32,
+                width: 32,
+                objectFit: "contain",
+                borderRadius: 2,
+                flexShrink: 0,
+              }}
+            />
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 900,
+                lineHeight: 1,
+                whiteSpace: "nowrap",
+              }}
             >
-              Logout
-            </button>
-          ) : (
-            <Link
-              to="/login"
-              className="rounded bg-gray-900 px-3 py-1.5 font-medium text-white hover:bg-gray-800"
+              RCA
+            </Typography>
+          </Box>
+
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+            <Button
+              component={RouterLink}
+              to="/"
+              color="inherit"
+              sx={{
+                color: "text.secondary",
+                "&:hover": { bgcolor: "background.default" },
+              }}
             >
-              Login
-            </Link>
-          )}
-        </nav>
-      </div>
-    </header>
+              Home
+            </Button>
+            <Button
+              component={RouterLink}
+              to="/products"
+              color="inherit"
+              sx={{
+                color: "text.secondary",
+                "&:hover": { bgcolor: "background.default" },
+              }}
+            >
+              Products
+            </Button>
+            <Button
+              component={RouterLink}
+              to="/cart"
+              color="inherit"
+              sx={{
+                color: "text.secondary",
+                "&:hover": { bgcolor: "background.default" },
+              }}
+            >
+              Cart
+            </Button>
+            <Button
+              component={RouterLink}
+              to="/dashboard"
+              color="inherit"
+              sx={{
+                color: "text.secondary",
+                "&:hover": { bgcolor: "background.default" },
+              }}
+            >
+              Dashboard
+            </Button>
+            <Button
+              component={RouterLink}
+              to="/settings"
+              color="inherit"
+              sx={{
+                color: "text.secondary",
+                "&:hover": { bgcolor: "background.default" },
+              }}
+            >
+              Settings
+            </Button>
+
+            {isLoggedIn ? (
+              <Button onClick={logout} variant="outlined" color="primary">
+                Logout
+              </Button>
+            ) : (
+              <Button component={RouterLink} to="/login" variant="contained">
+                Login
+              </Button>
+            )}
+          </Box>
+        </Container>
+      </Toolbar>
+    </AppBar>
   );
 }
-

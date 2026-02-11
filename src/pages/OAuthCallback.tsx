@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { ROUTES } from "../constants/routes";
 import { useAuth } from "../context/useAuth";
 
 export default function OAuthCallback() {
@@ -15,9 +16,9 @@ export default function OAuthCallback() {
 
     if (token) {
       setAccessToken(token);
-      navigate("/dashboard", { replace: true });
+      navigate(ROUTES.catalog, { replace: true });
     } else {
-      navigate("/login", { replace: true });
+      navigate(ROUTES.login, { replace: true });
     }
   }, [navigate, setAccessToken]);
 

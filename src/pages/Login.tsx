@@ -1,10 +1,8 @@
 import LoginIcon from "@mui/icons-material/Login";
 import {
-  Alert,
   Box,
   Button,
   Divider,
-  Snackbar,
   Stack,
 } from "@mui/material";
 import { useMemo, useState, type FormEvent } from "react";
@@ -16,17 +14,14 @@ import AuthTextField from "../components/ui/AuthTextField";
 import { AUTH_COPY } from "../constants/authContent";
 import { ROUTES } from "../constants/routes";
 import { useAuth } from "../context/useAuth";
+import { useNotification } from "../context/useNotification";
 
 
 export default function Login() {
   const loginCopy = AUTH_COPY.login;
   const { isLoggedIn, loginWithCredentials } = useAuth();
+  const { notifyError, notifyWarning } = useNotification();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [feedback, setFeedback] = useState<{
-    open: boolean;
-    message: string;
-    severity: "info" | "warning" | "error";
-  }>({ open: false, message: "", severity: "info" });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -41,11 +36,7 @@ export default function Login() {
 
   const handleSalesforceLogin = () => {
     if (!isSalesforceConfigured) {
-      setFeedback({
-        open: true,
-        message: loginCopy.missingClientIdMessage,
-        severity: "warning",
-      });
+      notifyWarning(loginCopy.missingClientIdMessage);
       return;
     }
 
@@ -59,11 +50,7 @@ export default function Login() {
     try {
       loginWithCredentials(email, password);
     } catch (error) {
-      setFeedback({
-        open: true,
-        message: error instanceof Error ? error.message : loginCopy.credentialErrorMessage,
-        severity: "error",
-      });
+      notifyError(error instanceof Error ? error.message : loginCopy.credentialErrorMessage);
     }
   };
 
@@ -146,22 +133,6 @@ export default function Login() {
           </Button>
         </Box>
       </Stack>
-
-      <Snackbar
-        open={feedback.open}
-        autoHideDuration={3000}
-        onClose={() => setFeedback((previous) => ({ ...previous, open: false }))}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert
-          severity={feedback.severity}
-          variant="filled"
-          onClose={() => setFeedback((previous) => ({ ...previous, open: false }))}
-          sx={{ width: "100%" }}
-        >
-          {feedback.message}
-        </Alert>
-      </Snackbar>
     </AuthShell>
   );
 }

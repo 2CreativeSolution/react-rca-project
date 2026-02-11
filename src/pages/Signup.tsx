@@ -1,4 +1,4 @@
-import { Alert, Box, Button, Snackbar, Stack } from "@mui/material";
+import { Box, Button, Stack } from "@mui/material";
 import { useMemo, useState, type FormEvent } from "react";
 import { Link as RouterLink, Navigate } from "react-router-dom";
 import AuthShell from "../components/ui/AuthShell";
@@ -6,6 +6,7 @@ import AuthTextField from "../components/ui/AuthTextField";
 import { AUTH_COPY } from "../constants/authContent";
 import { ROUTES } from "../constants/routes";
 import { useAuth } from "../context/useAuth";
+import { useNotification } from "../context/useNotification";
 
 function isEmailValid(email: string) {
   return /\S+@\S+\.\S+/.test(email);
@@ -14,15 +15,11 @@ function isEmailValid(email: string) {
 export default function Signup() {
   const signupCopy = AUTH_COPY.signup;
   const { isLoggedIn, signupWithCredentials } = useAuth();
+  const { notifyError } = useNotification();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [feedback, setFeedback] = useState<{
-    open: boolean;
-    message: string;
-    severity: "error" | "info";
-  }>({ open: false, message: "", severity: "info" });
 
   const validationError = useMemo(() => {
     if (!fullName.trim()) {
@@ -48,18 +45,14 @@ export default function Signup() {
     event.preventDefault();
 
     if (validationError) {
-      setFeedback({ open: true, message: validationError, severity: "error" });
+      notifyError(validationError);
       return;
     }
 
     try {
       signupWithCredentials(fullName.trim(), email.trim(), password);
     } catch (error) {
-      setFeedback({
-        open: true,
-        message: error instanceof Error ? error.message : signupCopy.fallbackErrorMessage,
-        severity: "error",
-      });
+      notifyError(error instanceof Error ? error.message : signupCopy.fallbackErrorMessage);
     }
   };
 
@@ -134,22 +127,6 @@ export default function Signup() {
           </Button>
         </Box>
       </Stack>
-
-      <Snackbar
-        open={feedback.open}
-        autoHideDuration={3000}
-        onClose={() => setFeedback((previous) => ({ ...previous, open: false }))}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert
-          severity={feedback.severity}
-          variant="filled"
-          onClose={() => setFeedback((previous) => ({ ...previous, open: false }))}
-          sx={{ width: "100%" }}
-        >
-          {feedback.message}
-        </Alert>
-      </Snackbar>
     </AuthShell>
   );
 }

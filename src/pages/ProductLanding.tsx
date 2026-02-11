@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/useAuth";
-import { callIntegration } from "../services/salesforceApi";
+import { useNotification } from "../context/useNotification";
 import { IntegrationActions } from "../services/integrationActions";
+import { callIntegration } from "../services/salesforceApi";
 
 type Catalog = {
   id?: string;
@@ -18,25 +19,27 @@ type ListCatalogsResult = {
 
 export default function ProductLanding() {
   const [catalogs, setCatalogs] = useState<Catalog[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const { accessToken } = useAuth();
+  const { isLoggedIn, token } = useAuth();
+  const { notifyError } = useNotification();
 
   useEffect(() => {
-    if (!accessToken) return;
-    callIntegration<ListCatalogsResult>(accessToken, {
+    if (!isLoggedIn || !token) {
+      return;
+    }
+
+    callIntegration<ListCatalogsResult>(token, {
       action: IntegrationActions.LIST_CATALOGS,
       defaultCatalogName: "",
     })
-      .then(result => {
-        // result.catalogs based on your response shape
+      .then((result) => {
         setCatalogs(result.catalogs || []);
       })
-      .catch(err => setError(err.message));
-  }, [accessToken]);
-
-  if (error) {
-    return <div className="text-red-600">Error: {error}</div>;
-  }
+      .catch((error) => {
+        setCatalogs([]);
+        const message = error instanceof Error ? error.message : "Unable to load catalogs.";
+        notifyError(message);
+      });
+  }, [isLoggedIn, notifyError, token]);
 
   return (
     <div>

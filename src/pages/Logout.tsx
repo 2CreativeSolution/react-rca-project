@@ -1,19 +1,22 @@
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
-import { Alert, Button, Stack, Typography } from "@mui/material";
+import { Button, Stack, Typography } from "@mui/material";
 import { useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import AuthShell from "../components/ui/AuthShell";
 import { AUTH_COPY } from "../constants/authContent";
 import { ROUTES } from "../constants/routes";
 import { useAuth } from "../context/useAuth";
+import { useNotification } from "../context/useNotification";
 
 export default function Logout() {
   const logoutCopy = AUTH_COPY.logout;
   const { isLoggedIn, logout } = useAuth();
+  const { notifySuccess } = useNotification();
   const [signedOut, setSignedOut] = useState(false);
 
   const handleSignOut = () => {
     logout();
+    notifySuccess(logoutCopy.postSignedOut.alertMessage);
     setSignedOut(true);
   };
 
@@ -54,9 +57,6 @@ export default function Logout() {
         actionSubtitle={logoutCopy.postSignedOut.actionSubtitle}
       >
         <Stack spacing={1.5}>
-          <Alert severity="success" sx={{ borderRadius: 3 }}>
-            {logoutCopy.postSignedOut.alertMessage}
-          </Alert>
           <Button
             component={RouterLink}
             to={ROUTES.login}

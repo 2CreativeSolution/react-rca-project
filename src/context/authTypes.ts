@@ -1,8 +1,11 @@
+export type AuthMethod = "salesforce" | "local";
+
 export type AuthContextType = {
+  authMethod: AuthMethod | null;
   isLoggedIn: boolean;
-  accessToken: string | null;
-  /** Persists an access token for the active session. */
-  setAccessToken: (token: string) => void;
+  token: string | null;
+  /** Persists a Salesforce OAuth session token. */
+  setSalesforceSession: (token: string) => void;
   /** Validates local credentials and creates a local session token. */
   loginWithCredentials: (email: string, password: string) => void;
   /** Registers a local user and creates a local session token. */

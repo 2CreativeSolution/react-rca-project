@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ROUTES } from "./constants/routes";
 import { AuthProvider } from "./context/AuthProvider";
+import { NotificationProvider } from "./context/NotificationProvider";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import MainLayout from "./layout/MainLayout";
 import OAuthCallback from "./pages/OAuthCallback";
@@ -27,10 +28,11 @@ import UserSettings from "./pages/UserSettings";
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <MainLayout>
-          <Routes>
+    <NotificationProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <MainLayout>
+            <Routes>
             {/* ================= PUBLIC ROUTES ================= */}
             <Route path={ROUTES.home} element={<Landing />} />
             <Route path={ROUTES.login} element={<Login />} />
@@ -106,10 +108,11 @@ function App() {
                 </ProtectedRoute>
               }
             />
-          </Routes>
-        </MainLayout>
-      </BrowserRouter>
-    </AuthProvider>
+            </Routes>
+          </MainLayout>
+        </BrowserRouter>
+      </AuthProvider>
+    </NotificationProvider>
   );
 }
 

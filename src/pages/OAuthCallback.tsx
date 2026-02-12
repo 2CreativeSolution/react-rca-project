@@ -7,19 +7,34 @@ export default function OAuthCallback() {
   const { setAccessToken } = useAuth();
 
   useEffect(() => {
-    const hash = new URLSearchParams(
-      window.location.hash.substring(1)
-    );
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
 
-    const token = hash.get("access_token");
-
-    if (token) {
-      setAccessToken(token);
-      navigate("/dashboard", { replace: true });
-    } else {
-      navigate("/login", { replace: true });
+    if (!code) {
+      navigate("/login");
+      return;
     }
+
+    // Send code to Apex for token exchange
+    fetch("/services/apexrest/api/integration", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "exchangeToken",
+        code,
+      }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setAccessToken(data.accessToken);
+          navigate("/dashboard");
+        } else {
+          navigate("/login");
+        }
+      })
+      .catch(() => navigate("/login"));
   }, [navigate, setAccessToken]);
 
-  return <div>Signing you in…</div>;
+  return <div>Signing you in securely…</div>;
 }

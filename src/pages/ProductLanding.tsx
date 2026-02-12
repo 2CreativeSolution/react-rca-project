@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "../context/useAuth";
 import { callIntegration } from "../services/salesforceApi";
-import { IntegrationActions } from "../services/integrationActions";
+//import { IntegrationActions } from "../services/integrationActions";
+import { auth } from "../firebase";
 
 type Catalog = {
   id?: string;
@@ -16,23 +16,52 @@ type ListCatalogsResult = {
   catalogs: Catalog[];
 };
 
+type ListCatalogPayload = {
+  defaultCatalogName: string;
+};
+
 export default function ProductLanding() {
   const [catalogs, setCatalogs] = useState<Catalog[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const { accessToken } = useAuth();
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    if (!accessToken) return;
-    callIntegration<ListCatalogsResult>(accessToken, {
-      action: IntegrationActions.LIST_CATALOGS,
-      defaultCatalogName: "",
-    })
-      .then(result => {
-        // result.catalogs based on your response shape
+    const loadCatalogs = async () => {
+      try {
+        const user = auth.currentUser;
+
+        if (!user) {
+          setError("User not authenticated");
+          setLoading(false);
+          return;
+        }
+
+        const token = await user.getIdToken();
+        console.log("Resolved token:", token);
+
+        const result = await callIntegration<ListCatalogsResult, ListCatalogPayload>(
+          "/api/listCatalogs",
+          { defaultCatalogName: "" }
+        );
+
         setCatalogs(result.catalogs || []);
-      })
-      .catch(err => setError(err.message));
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("Something went wrong");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCatalogs();
   }, []);
+
+  if (loading) {
+    return <div>Loading catalogs...</div>;
+  }
 
   if (error) {
     return <div className="text-red-600">Error: {error}</div>;
@@ -43,12 +72,12 @@ export default function ProductLanding() {
       <h1 className="text-xl font-bold mb-4">Catalogs</h1>
 
       <ul>
-  {catalogs.map((catalog, index) => (
-    <li key={catalog.id ?? index}>
-      {catalog.name}
-    </li>
-  ))}
-</ul>
+        {catalogs.map((catalog, index) => (
+          <li key={catalog.id ?? index}>
+            {catalog.name}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

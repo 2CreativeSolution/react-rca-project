@@ -6,7 +6,7 @@ import {
 
 export function loginWithSalesforce() {
   const params = new URLSearchParams({
-    response_type: "token", // implicit flow (simpler for now)
+    response_type: "code", // implicit flow (simpler for now)
     client_id: CLIENT_ID,
     redirect_uri: REDIRECT_URI,
   });

@@ -1,10 +1,11 @@
 import { AppBar, Box, Button, Container, Toolbar, Typography } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
+import { ROUTES } from "../constants/routes";
 import { useAuth } from "../context/useAuth";
 import logo from "../assets/logo.jpg";
 
 export default function Header() {
-  const { isLoggedIn, logout } = useAuth();
+  const { isLoggedIn } = useAuth();
 
   return (
     <AppBar
@@ -29,7 +30,7 @@ export default function Header() {
         >
           <Box
             component={RouterLink}
-            to="/"
+            to={ROUTES.home}
             sx={{
               display: "flex",
               alignItems: "center",
@@ -66,7 +67,7 @@ export default function Header() {
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
             <Button
               component={RouterLink}
-              to="/"
+              to={ROUTES.home}
               color="inherit"
               sx={{
                 color: "text.secondary",
@@ -77,7 +78,7 @@ export default function Header() {
             </Button>
             <Button
               component={RouterLink}
-              to="/products"
+              to={ROUTES.products}
               color="inherit"
               sx={{
                 color: "text.secondary",
@@ -88,7 +89,7 @@ export default function Header() {
             </Button>
             <Button
               component={RouterLink}
-              to="/cart"
+              to={ROUTES.cart}
               color="inherit"
               sx={{
                 color: "text.secondary",
@@ -99,18 +100,18 @@ export default function Header() {
             </Button>
             <Button
               component={RouterLink}
-              to="/dashboard"
+              to={ROUTES.catalog}
               color="inherit"
               sx={{
                 color: "text.secondary",
                 "&:hover": { bgcolor: "background.default" },
               }}
             >
-              Dashboard
+              Catalog
             </Button>
             <Button
               component={RouterLink}
-              to="/settings"
+              to={ROUTES.settings}
               color="inherit"
               sx={{
                 color: "text.secondary",
@@ -121,11 +122,11 @@ export default function Header() {
             </Button>
 
             {isLoggedIn ? (
-              <Button onClick={logout} variant="outlined" color="primary">
+              <Button component={RouterLink} to={ROUTES.logout} variant="outlined" color="primary">
                 Logout
               </Button>
             ) : (
-              <Button component={RouterLink} to="/login" variant="contained">
+              <Button component={RouterLink} to={ROUTES.login} variant="contained">
                 Login
               </Button>
             )}

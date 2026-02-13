@@ -8,7 +8,6 @@ export const ROUTES = {
   contact: "/contact",
   terms: "/terms",
   privacy: "/privacy",
-  oauthCallback: "/oauth/callback",
   catalog: "/catalog",
   dashboard: "/dashboard",
   products: "/products",

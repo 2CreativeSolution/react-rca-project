@@ -3,14 +3,11 @@ export const AUTH_COPY = {
     panelTitle: "Manage plans, orders, and account actions in one workspace.",
     panelSubtitle:
       "Sign in once to unlock a unified catalog and faster customer-ready workflows.",
-    valuePills: ["Secure OAuth", "Unified catalog", "Fast checkout"],
+    valuePills: ["Secure sign-in", "Unified catalog", "Fast checkout"],
     actionTitle: "Sign in",
     actionSubtitle: "Use your email and password to continue.",
     submitLabel: "Sign in",
-    salesforceLabel: "Continue with Salesforce",
-    salesforceSectionLabel: "Other sign-in options",
     signupCta: "Create account",
-    missingClientIdMessage: "Salesforce client ID is not configured yet.",
     credentialErrorMessage: "Unable to sign in with credentials.",
   },
   signup: {
@@ -23,6 +20,8 @@ export const AUTH_COPY = {
     submitLabel: "Create account",
     loginCta: "Have an account? Sign in",
     fallbackErrorMessage: "Unable to create account.",
+    profileWarningMessage: "Account created, but your profile details are still updating.",
+    syncWarningMessage: "Account created, but profile sync is still pending.",
     validation: {
       fullNameRequired: "Full name is required.",
       invalidEmail: "Enter a valid email address.",
@@ -46,6 +45,7 @@ export const AUTH_COPY = {
       actionTitle: "Sign-out complete",
       actionSubtitle: "Choose your next step.",
       alertMessage: "You have been signed out.",
+      errorMessage: "Unable to sign out right now. Please try again.",
     },
     confirmSignOut: {
       panelTitle: "Finish your session on this device.",

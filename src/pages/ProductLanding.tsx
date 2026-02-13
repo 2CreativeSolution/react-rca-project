@@ -1,7 +1,7 @@
+import { Box, CircularProgress, List, ListItem, ListItemText, Paper, Stack, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
-import { useAuth } from "../context/useAuth";
+import { PRODUCT_COPY } from "../constants/productContent";
 import { useNotification } from "../context/useNotification";
-import { IntegrationActions } from "../services/integrationActions";
 import { callIntegration } from "../services/salesforceApi";
 
 type Catalog = {
@@ -18,17 +18,13 @@ type ListCatalogsResult = {
 };
 
 export default function ProductLanding() {
+  const productLandingCopy = PRODUCT_COPY.landing;
   const [catalogs, setCatalogs] = useState<Catalog[]>([]);
-  const { isLoggedIn, token } = useAuth();
+  const [loading, setLoading] = useState(true);
   const { notifyError } = useNotification();
 
   useEffect(() => {
-    if (!isLoggedIn || !token) {
-      return;
-    }
-
-    callIntegration<ListCatalogsResult>(token, {
-      action: IntegrationActions.LIST_CATALOGS,
+    callIntegration<ListCatalogsResult, { defaultCatalogName: string }>("/api/listCatalogs", {
       defaultCatalogName: "",
     })
       .then((result) => {
@@ -36,22 +32,45 @@ export default function ProductLanding() {
       })
       .catch((error) => {
         setCatalogs([]);
-        const message = error instanceof Error ? error.message : "Unable to load catalogs.";
+        const message = error instanceof Error ? error.message : productLandingCopy.fallbackErrorMessage;
         notifyError(message);
+      })
+      .finally(() => {
+        setLoading(false);
       });
-  }, [isLoggedIn, notifyError, token]);
+  }, [notifyError, productLandingCopy.fallbackErrorMessage]);
+
+  if (loading) {
+    return (
+      <Stack alignItems="center" justifyContent="center" spacing={1.5} sx={{ py: 10 }}>
+        <CircularProgress size={28} />
+        <Typography color="text.secondary" variant="body2">
+          {productLandingCopy.loadingMessage}
+        </Typography>
+      </Stack>
+    );
+  }
 
   return (
-    <div>
-      <h1 className="text-xl font-bold mb-4">Catalogs</h1>
-
-      <ul>
-  {catalogs.map((catalog, index) => (
-    <li key={catalog.id ?? index}>
-      {catalog.name}
-    </li>
-  ))}
-</ul>
-    </div>
+    <Stack spacing={2.5} sx={{ py: 1 }}>
+      <Typography variant="h4">{productLandingCopy.title}</Typography>
+      <Paper variant="outlined" sx={{ borderRadius: 2 }}>
+        {catalogs.length === 0 ? (
+          <Box sx={{ p: 2.5 }}>
+            <Typography color="text.secondary" variant="body1">
+              {productLandingCopy.emptyMessage}
+            </Typography>
+          </Box>
+        ) : (
+          <List disablePadding>
+            {catalogs.map((catalog, index) => (
+              <ListItem divider key={catalog.id ?? index}>
+                <ListItemText primary={catalog.name} />
+              </ListItem>
+            ))}
+          </List>
+        )}
+      </Paper>
+    </Stack>
   );
 }

@@ -4,7 +4,6 @@ import { AuthProvider } from "./context/AuthProvider";
 import { NotificationProvider } from "./context/NotificationProvider";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import MainLayout from "./layout/MainLayout";
-import OAuthCallback from "./pages/OAuthCallback";
 
 /* Public pages */
 import Landing from "./pages/Landing";
@@ -43,7 +42,6 @@ function App() {
             <Route path={ROUTES.contact} element={<Contact />} />
             <Route path={ROUTES.terms} element={<Terms />} />
             <Route path={ROUTES.privacy} element={<Privacy />} />
-            <Route path={ROUTES.oauthCallback} element={<OAuthCallback />} />
 
             {/* ================= PROTECTED ROUTES ================= */}
             <Route

@@ -7,6 +7,7 @@ import { AUTH_COPY } from "../constants/authContent";
 import { ROUTES } from "../constants/routes";
 import { useAuth } from "../context/useAuth";
 import { useNotification } from "../context/useNotification";
+import { callIntegration } from "../services/salesforceApi";
 
 function isEmailValid(email: string) {
   return /\S+@\S+\.\S+/.test(email);
@@ -14,12 +15,13 @@ function isEmailValid(email: string) {
 
 export default function Signup() {
   const signupCopy = AUTH_COPY.signup;
-  const { isLoggedIn, signupWithCredentials } = useAuth();
-  const { notifyError } = useNotification();
+  const { isAuthReady, isLoggedIn, signupWithCredentials } = useAuth();
+  const { notifyError, notifyWarning } = useNotification();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validationError = useMemo(() => {
     if (!fullName.trim()) {
@@ -37,11 +39,11 @@ export default function Signup() {
     return null;
   }, [confirmPassword, email, fullName, password, signupCopy.validation]);
 
-  if (isLoggedIn) {
+  if (isAuthReady && isLoggedIn) {
     return <Navigate to={ROUTES.catalog} replace />;
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (validationError) {
@@ -49,10 +51,24 @@ export default function Signup() {
       return;
     }
 
+    setIsSubmitting(true);
+
     try {
-      signupWithCredentials(fullName.trim(), email.trim(), password);
+      const signupResult = await signupWithCredentials(fullName.trim(), email.trim(), password);
+
+      if (signupResult.profileUpdateFailed) {
+        notifyWarning(signupCopy.profileWarningMessage);
+      }
+
+      try {
+        await callIntegration("/api/sync-user", {});
+      } catch {
+        notifyWarning(signupCopy.syncWarningMessage);
+      }
     } catch (error) {
       notifyError(error instanceof Error ? error.message : signupCopy.fallbackErrorMessage);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -111,6 +127,7 @@ export default function Signup() {
             type="submit"
             variant="contained"
             size="large"
+            disabled={isSubmitting}
             sx={{
               py: 1.25,
               borderRadius: 3,

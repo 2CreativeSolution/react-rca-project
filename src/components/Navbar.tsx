@@ -3,6 +3,9 @@ import { useAuth } from "../context/useAuth";
 
 export default function Navbar() {
   const { isLoggedIn, logout } = useAuth();
+  const handleLogout = () => {
+    void logout();
+  };
 
   return (
     <header className="bg-white border-b">
@@ -40,7 +43,7 @@ export default function Navbar() {
                 Account
               </Link>
               <button
-                onClick={logout}
+                onClick={handleLogout}
                 className="text-gray-500 hover:text-black"
               >
                 Logout

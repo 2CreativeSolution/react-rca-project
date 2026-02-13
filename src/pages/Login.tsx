@@ -1,14 +1,10 @@
-import LoginIcon from "@mui/icons-material/Login";
 import {
   Box,
   Button,
-  Divider,
   Stack,
 } from "@mui/material";
-import { useMemo, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Link as RouterLink, Navigate } from "react-router-dom";
-import { CLIENT_ID } from "../auth/salesforceConfig";
-import { loginWithSalesforce } from "../auth/salesforceLogin";
 import AuthShell from "../components/ui/AuthShell";
 import AuthTextField from "../components/ui/AuthTextField";
 import { AUTH_COPY } from "../constants/authContent";
@@ -19,38 +15,26 @@ import { useNotification } from "../context/useNotification";
 
 export default function Login() {
   const loginCopy = AUTH_COPY.login;
-  const { isLoggedIn, loginWithCredentials } = useAuth();
-  const { notifyError, notifyWarning } = useNotification();
+  const { isAuthReady, isLoggedIn, loginWithCredentials } = useAuth();
+  const { notifyError } = useNotification();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const isSalesforceConfigured = useMemo(
-    () => CLIENT_ID.trim().length > 0 && CLIENT_ID !== "PASTE_CONNECTED_APP_CONSUMER_KEY",
-    []
-  );
-
-  if (isLoggedIn) {
-    return <Navigate to={ROUTES.catalog} replace />;
+  if (isAuthReady && isLoggedIn) {
+    return <Navigate to={ROUTES.dashboard} replace />;
   }
 
-  const handleSalesforceLogin = () => {
-    if (!isSalesforceConfigured) {
-      notifyWarning(loginCopy.missingClientIdMessage);
-      return;
-    }
-
-    setIsSubmitting(true);
-    loginWithSalesforce();
-  };
-
-  const handleCredentialsSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleCredentialsSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setIsSubmitting(true);
 
     try {
-      loginWithCredentials(email, password);
+      await loginWithCredentials(email, password);
     } catch (error) {
       notifyError(error instanceof Error ? error.message : loginCopy.credentialErrorMessage);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -94,6 +78,7 @@ export default function Login() {
             type="submit"
             variant="contained"
             size="large"
+            disabled={isSubmitting}
             sx={{
               py: 1.25,
               borderRadius: 3,
@@ -101,29 +86,6 @@ export default function Login() {
             }}
           >
             {loginCopy.submitLabel}
-          </Button>
-        </Stack>
-
-        <Divider sx={{ color: "text.secondary", my: 2 }}>{loginCopy.salesforceSectionLabel}</Divider>
-
-        <Stack spacing={1.25} sx={{ mt: 1.5 }}>
-          <Button
-            onClick={handleSalesforceLogin}
-            variant="contained"
-            size="large"
-            startIcon={<LoginIcon />}
-            disabled={isSubmitting}
-            sx={{
-              py: 1.15,
-              borderRadius: 3,
-              bgcolor: "secondary.main",
-              color: "background.paper",
-              "&:hover": {
-                bgcolor: "text.primary",
-              },
-            }}
-          >
-            {loginCopy.salesforceLabel}
           </Button>
         </Stack>
 

@@ -11,13 +11,18 @@ import { useNotification } from "../context/useNotification";
 export default function Logout() {
   const logoutCopy = AUTH_COPY.logout;
   const { isLoggedIn, logout } = useAuth();
-  const { notifySuccess } = useNotification();
+  const { notifyError, notifySuccess } = useNotification();
   const [signedOut, setSignedOut] = useState(false);
 
-  const handleSignOut = () => {
-    logout();
-    notifySuccess(logoutCopy.postSignedOut.alertMessage);
-    setSignedOut(true);
+  const handleSignOut = async () => {
+    try {
+      await logout();
+      notifySuccess(logoutCopy.postSignedOut.alertMessage);
+      setSignedOut(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : logoutCopy.postSignedOut.errorMessage;
+      notifyError(message);
+    }
   };
 
   if (!isLoggedIn && !signedOut) {

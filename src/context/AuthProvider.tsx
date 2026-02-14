@@ -9,6 +9,7 @@ import {
   type User,
 } from "firebase/auth";
 import { auth } from "../auth/firebaseClient";
+import { requestPasswordReset } from "../services/auth/passwordResetService";
 import { AuthContext } from "./AuthContext";
 import type { SignupResult } from "./authTypes";
 
@@ -74,8 +75,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         isAuthReady,
         isLoggedIn,
+        currentUser,
         loginWithCredentials,
         signupWithCredentials,
+        requestPasswordReset,
         getAccessToken,
         logout,
       }}

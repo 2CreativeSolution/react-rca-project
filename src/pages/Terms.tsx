@@ -1,7 +1,6 @@
+import { Navigate } from "react-router-dom";
+import { ROUTES } from "../constants/routes";
+
 export default function Terms() {
-  return (
-    <div>
-      <h1>Terms Page</h1>
-    </div>
-  );
+  return <Navigate to={`${ROUTES.legal}#terms`} replace />;
 }

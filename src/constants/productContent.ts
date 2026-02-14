@@ -1,9 +1,9 @@
 export const PRODUCT_COPY = {
   landing: {
-    title: "Catalogs",
-    loadingMessage: "Loading catalogs...",
-    fallbackErrorMessage: "Unable to load catalogs.",
-    emptyMessage: "No catalogs are available right now.",
+    title: "Products",
+    loadingMessage: "Loading products...",
+    fallbackErrorMessage: "Unable to load products.",
+    emptyMessage: "No products are available right now.",
   },
   catalog: {
     pageTitle: "Catalog Experience",
@@ -80,8 +80,89 @@ export const PRODUCT_COPY = {
     signOutSuccessMessage: "Signed out successfully.",
     signOutFallbackErrorMessage: "Unable to sign out.",
     versionLabel: "Version",
-    privacyLinkLabel: "Privacy",
-    termsLinkLabel: "Terms",
+    legalLinkLabel: "Legal",
     contactLinkLabel: "Contact",
+  },
+  legal: {
+    pageTitle: "Legal",
+    pageSubtitle: "Review the privacy and terms policies for this app in one place.",
+    lastUpdatedLabel: "Last updated",
+    quickLinksTitle: "Quick links",
+    privacySectionTitle: "Privacy",
+    termsSectionTitle: "Terms",
+    privacy: {
+      pageTitle: "Privacy",
+      pageSubtitle: "How we collect, use, and protect personal information when you use this app.",
+      lastUpdated: "February 14, 2026",
+      sections: [
+        {
+          title: "What we collect",
+          body: "We collect account identity details and app usage events required to deliver authentication, customer support, and product browsing functionality.",
+        },
+        {
+          title: "How we use data",
+          body: "Data is used to operate services, secure your session, troubleshoot issues, and improve user experience. We do not sell personal information.",
+        },
+        {
+          title: "Data retention",
+          body: "We keep data only for as long as needed to meet product and legal requirements, then remove or anonymize it where possible.",
+        },
+      ],
+    },
+    terms: {
+      pageTitle: "Terms",
+      pageSubtitle: "The basic rules for using this app and related services responsibly.",
+      lastUpdated: "February 14, 2026",
+      sections: [
+        {
+          title: "Use of service",
+          body: "You agree to use this app only for lawful business and customer operations and not to misuse APIs, content, or account access.",
+        },
+        {
+          title: "Account responsibilities",
+          body: "You are responsible for maintaining the confidentiality of your login credentials and for activity that occurs under your account.",
+        },
+        {
+          title: "Service changes",
+          body: "Features may be updated or retired over time. Continued use after updates indicates acceptance of the revised terms.",
+        },
+      ],
+    },
+    contact: {
+      pageTitle: "Contact",
+      pageSubtitle: "Reach our support team for account access, privacy requests, and general product questions.",
+      lastUpdated: "February 14, 2026",
+      form: {
+        cardTitle: "Send us a message",
+        cardSubtitle: "Share your request and our team will route it to the right owner.",
+        fullNameLabel: "Full name",
+        workEmailLabel: "Work email",
+        topicLabel: "Topic",
+        messageLabel: "Message",
+        topicOptions: ["Account access", "Privacy request", "Product support", "General question"],
+        submitLabel: "Submit request",
+        consentNote: "By submitting this form, you agree that support may contact you about this request.",
+      },
+      supportPanel: {
+        title: "Support details",
+        availabilityTitle: "Business hours",
+        responseTitle: "Response time",
+        legalCtaLabel: "Open legal center",
+      },
+      sections: [
+        {
+          title: "Support email",
+          body: "support@react-rca.dev",
+        },
+        {
+          title: "Business hours",
+          body: "Monday to Friday, 9:00 AM to 6:00 PM (local business time).",
+        },
+        {
+          title: "Typical response time",
+          body: "Most requests receive a response within one business day.",
+        },
+      ],
+    },
   },
 } as const;

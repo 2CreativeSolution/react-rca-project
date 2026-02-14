@@ -13,6 +13,7 @@ import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Contact from "./pages/Contact";
+import Legal from "./pages/Legal";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 
@@ -40,6 +41,7 @@ function App() {
             <Route path={ROUTES.forgotPassword} element={<ForgotPassword />} />
             <Route path={ROUTES.resetPassword} element={<ResetPassword />} />
             <Route path={ROUTES.contact} element={<Contact />} />
+            <Route path={ROUTES.legal} element={<Legal />} />
             <Route path={ROUTES.terms} element={<Terms />} />
             <Route path={ROUTES.privacy} element={<Privacy />} />
 

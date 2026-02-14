@@ -199,11 +199,8 @@ export default function UserSettings() {
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }}>
           <ReadOnlyField label={settingsCopy.versionLabel} value={appVersion} />
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ ml: { sm: "auto" } }}>
-            <Button size="small" variant="outlined" component={RouterLink} to={ROUTES.privacy}>
-              {settingsCopy.privacyLinkLabel}
-            </Button>
-            <Button size="small" variant="outlined" component={RouterLink} to={ROUTES.terms}>
-              {settingsCopy.termsLinkLabel}
+            <Button size="small" variant="outlined" component={RouterLink} to={ROUTES.legal}>
+              {settingsCopy.legalLinkLabel}
             </Button>
             <Button size="small" variant="outlined" component={RouterLink} to={ROUTES.contact}>
               {settingsCopy.contactLinkLabel}

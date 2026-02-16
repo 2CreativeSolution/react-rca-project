@@ -121,8 +121,8 @@ export default function Landing() {
           </Typography>
 
           <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap" sx={{ pt: 1 }}>
-            <Button variant="contained" onClick={() => navigate("/login")}>
-              View Plans
+            <Button variant="contained" onClick={() => navigate("/dashboard")}>
+              Dashboard
             </Button>
             <Button variant="outlined" onClick={() => navigate("/products")}>
               Browse products

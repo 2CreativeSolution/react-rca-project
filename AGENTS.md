@@ -16,6 +16,12 @@ If any requirement is ambiguous (placement, scope, or behavior), ask for clarifi
 After making code changes, run eslint autofix (prefer `npm run lint:fix`) to keep lint aligned.
 Tracking docs must stay concise and outcome-focused: summarize the overall change, not step-by-step micro edits.
 For related work in the same feature, prefer updating one consolidated entry in PBI/CHANGELOG/WORK_LOG/EVIDENCE_INDEX instead of adding many small repetitive entries.
+For API discovery, endpoint validation, and implementation decisions, treat only the Postman collection `2Creative RCA API` as source-of-truth unless explicitly told otherwise.
+Prefer extending existing files/modules over creating new files when the use case matches existing structure and boundaries.
+Prioritize clean code: readable naming, small focused functions, and minimal complexity.
+Enforce separation of concerns: keep UI, API access, and business logic in their designated layers.
+Favor modularity and reuse: extract shared helpers/utilities when logic repeats or is likely to repeat.
+Before creating a new file, check for a similar file/pattern and align with it unless there is a clear reason not to.
 
 ## Project
 react-rca-dev

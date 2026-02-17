@@ -1,7 +1,7 @@
+import { INTEGRATION_ROUTES } from "../../constants/integrationRoutes";
 import { callIntegration } from "../salesforceApi";
 import type { CatalogApiEnvelope, CatalogItem, CatalogPageData, CatalogRecord } from "./types";
 
-const CATALOGS_ENDPOINT = "/api/listCatalogs";
 const DEFAULT_PAYLOAD = { defaultCatalogName: "" };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -86,6 +86,9 @@ function normalizeCatalogResponse(raw: unknown): CatalogPageData {
 }
 
 export async function fetchCatalogs(): Promise<CatalogPageData> {
-  const response = await callIntegration<unknown, typeof DEFAULT_PAYLOAD>(CATALOGS_ENDPOINT, DEFAULT_PAYLOAD);
+  const response = await callIntegration<unknown, typeof DEFAULT_PAYLOAD>(
+    INTEGRATION_ROUTES.listCatalogs,
+    DEFAULT_PAYLOAD
+  );
   return normalizeCatalogResponse(response);
 }

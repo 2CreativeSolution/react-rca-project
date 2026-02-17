@@ -1,5 +1,6 @@
 import { Box, CircularProgress, List, ListItem, ListItemText, Paper, Stack, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
+import { INTEGRATION_ROUTES } from "../constants/integrationRoutes";
 import { PRODUCT_COPY } from "../constants/productContent";
 import { useNotification } from "../context/useNotification";
 import { callIntegration } from "../services/salesforceApi";
@@ -24,7 +25,7 @@ export default function ProductLanding() {
   const { notifyError } = useNotification();
 
   useEffect(() => {
-    callIntegration<ListCatalogsResult, { defaultCatalogName: string }>("/api/listCatalogs", {
+    callIntegration<ListCatalogsResult, { defaultCatalogName: string }>(INTEGRATION_ROUTES.listCatalogs, {
       defaultCatalogName: "",
     })
       .then((result) => {

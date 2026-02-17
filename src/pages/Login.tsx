@@ -4,34 +4,67 @@ import {
   Stack,
 } from "@mui/material";
 import { useState, type FormEvent } from "react";
-import { Link as RouterLink, Navigate } from "react-router-dom";
+import { Link as RouterLink, Navigate, useNavigate } from "react-router-dom";
 import AuthShell from "../components/ui/AuthShell";
 import AuthTextField from "../components/ui/AuthTextField";
 import { AUTH_COPY } from "../constants/authContent";
 import { ROUTES } from "../constants/routes";
 import { useAuth } from "../context/useAuth";
 import { useNotification } from "../context/useNotification";
+import { evaluateDecision, syncUser } from "../services/salesforceApi";
 
 
 export default function Login() {
   const loginCopy = AUTH_COPY.login;
-  const { isAuthReady, isLoggedIn, loginWithCredentials } = useAuth();
-  const { notifyError } = useNotification();
+  const navigate = useNavigate();
+  const { isAuthReady, isLoggedIn, loginWithCredentials, rcaIdentity, setRcaIdentity } = useAuth();
+  const { notifyError, notifyWarning } = useNotification();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasCredentialSubmit, setHasCredentialSubmit] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  if (isAuthReady && isLoggedIn) {
+  if (isAuthReady && isLoggedIn && !hasCredentialSubmit) {
     return <Navigate to={ROUTES.dashboard} replace />;
   }
 
   const handleCredentialsSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setHasCredentialSubmit(true);
     setIsSubmitting(true);
 
     try {
       await loginWithCredentials(email, password);
+
+      let resolvedIdentity = rcaIdentity;
+      if (!resolvedIdentity) {
+        try {
+          const syncedIdentity = await syncUser({});
+          resolvedIdentity = {
+            accountId: syncedIdentity.accountId,
+            contactId: syncedIdentity.contactId,
+          };
+          setRcaIdentity(resolvedIdentity);
+        } catch {
+          resolvedIdentity = null;
+        }
+      }
+
+      if (!resolvedIdentity) {
+        notifyWarning(loginCopy.missingIdentityWarningMessage);
+        navigate(ROUTES.home, { replace: true });
+        return;
+      }
+
+      try {
+        const decision = await evaluateDecision(resolvedIdentity);
+        navigate(decision.isActive ? ROUTES.dashboard : ROUTES.home, { replace: true });
+      } catch {
+        notifyWarning(loginCopy.decisionWarningMessage);
+        navigate(ROUTES.home, { replace: true });
+      }
     } catch (error) {
+      setHasCredentialSubmit(false);
       notifyError(error instanceof Error ? error.message : loginCopy.credentialErrorMessage);
     } finally {
       setIsSubmitting(false);

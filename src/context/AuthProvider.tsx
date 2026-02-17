@@ -9,9 +9,14 @@ import {
   type User,
 } from "firebase/auth";
 import { auth } from "../auth/firebaseClient";
+import {
+  clearRcaIdentityStorage,
+  readRcaIdentity,
+  writeRcaIdentity,
+} from "../services/auth/rcaIdentityStorage";
 import { requestPasswordReset } from "../services/auth/passwordResetService";
 import { AuthContext } from "./AuthContext";
-import type { SignupResult } from "./authTypes";
+import type { RcaIdentity, SignupResult } from "./authTypes";
 
 async function resolveAccessToken(user: User | null): Promise<string | null> {
   if (!user) {
@@ -24,6 +29,7 @@ async function resolveAccessToken(user: User | null): Promise<string | null> {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
+  const [rcaIdentity, setRcaIdentityState] = useState<RcaIdentity | null>(() => readRcaIdentity());
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (nextUser: User | null) => {
@@ -64,8 +70,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return resolveAccessToken(user);
   };
 
+  const setRcaIdentity = (identity: RcaIdentity) => {
+    setRcaIdentityState(identity);
+    writeRcaIdentity(identity);
+  };
+
+  const clearRcaIdentity = () => {
+    setRcaIdentityState(null);
+    clearRcaIdentityStorage();
+  };
+
   const logout = async () => {
     await signOut(auth);
+    clearRcaIdentity();
   };
 
   const isLoggedIn = Boolean(currentUser);
@@ -76,8 +93,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthReady,
         isLoggedIn,
         currentUser,
+        rcaIdentity,
         loginWithCredentials,
         signupWithCredentials,
+        setRcaIdentity,
+        clearRcaIdentity,
         requestPasswordReset,
         getAccessToken,
         logout,

@@ -14,6 +14,7 @@ import {
   readRcaIdentity,
   writeRcaIdentity,
 } from "../services/auth/rcaIdentityStorage";
+import { clearCatalogOptionsCache } from "../services/catalog/catalogService";
 import { requestPasswordReset } from "../services/auth/passwordResetService";
 import { AuthContext } from "./AuthContext";
 import type { RcaIdentity, SignupResult } from "./authTypes";
@@ -78,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const clearRcaIdentity = () => {
     setRcaIdentityState(null);
     clearRcaIdentityStorage();
+    clearCatalogOptionsCache();
   };
 
   const logout = async () => {

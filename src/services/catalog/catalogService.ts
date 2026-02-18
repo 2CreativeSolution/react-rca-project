@@ -1,8 +1,22 @@
 import { INTEGRATION_ROUTES } from "../../constants/integrationRoutes";
+import { auth } from "../../auth/firebaseClient";
 import { callIntegration } from "../salesforceApi";
 import type { CatalogApiEnvelope, CatalogItem, CatalogPageData, CatalogRecord } from "./types";
 
 const DEFAULT_PAYLOAD = { defaultCatalogName: "" };
+const CATALOG_CACHE_TTL_MS = 10 * 60 * 1000;
+
+export type CatalogOption = {
+  id: string;
+  name: string;
+};
+
+let catalogPageCache: {
+  ownerKey: string;
+  value: CatalogPageData;
+  fetchedAt: number;
+} | null = null;
+let catalogPageRequestInFlight: Promise<CatalogPageData> | null = null;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -85,10 +99,61 @@ function normalizeCatalogResponse(raw: unknown): CatalogPageData {
   };
 }
 
-export async function fetchCatalogs(): Promise<CatalogPageData> {
-  const response = await callIntegration<unknown, typeof DEFAULT_PAYLOAD>(
+type FetchCatalogsOptions = {
+  forceRefresh?: boolean;
+};
+
+export async function fetchCatalogs(options: FetchCatalogsOptions = {}): Promise<CatalogPageData> {
+  const { forceRefresh = false } = options;
+  const now = Date.now();
+  const currentOwnerKey = auth.currentUser?.uid ?? "anonymous";
+
+  if (
+    !forceRefresh &&
+    catalogPageCache &&
+    catalogPageCache.ownerKey === currentOwnerKey &&
+    now - catalogPageCache.fetchedAt < CATALOG_CACHE_TTL_MS
+  ) {
+    return catalogPageCache.value;
+  }
+
+  if (!forceRefresh && catalogPageRequestInFlight) {
+    return catalogPageRequestInFlight;
+  }
+
+  const request = callIntegration<unknown, typeof DEFAULT_PAYLOAD>(
     INTEGRATION_ROUTES.listCatalogs,
     DEFAULT_PAYLOAD
-  );
-  return normalizeCatalogResponse(response);
+  ).then((response) => {
+    const data = normalizeCatalogResponse(response);
+    catalogPageCache = {
+      ownerKey: currentOwnerKey,
+      value: data,
+      fetchedAt: Date.now(),
+    };
+    return data;
+  });
+
+  catalogPageRequestInFlight = request;
+
+  try {
+    return await request;
+  } finally {
+    if (catalogPageRequestInFlight === request) {
+      catalogPageRequestInFlight = null;
+    }
+  }
+}
+
+export async function getCatalogOptions(): Promise<CatalogOption[]> {
+  const data = await fetchCatalogs();
+  return data.items.map((item) => ({
+    id: item.id,
+    name: item.name,
+  }));
+}
+
+export function clearCatalogOptionsCache(): void {
+  catalogPageCache = null;
+  catalogPageRequestInFlight = null;
 }

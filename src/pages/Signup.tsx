@@ -7,7 +7,7 @@ import { AUTH_COPY } from "../constants/authContent";
 import { ROUTES } from "../constants/routes";
 import { useAuth } from "../context/useAuth";
 import { useNotification } from "../context/useNotification";
-import { callIntegration } from "../services/salesforceApi";
+import { syncUser } from "../services/salesforceApi";
 
 function isEmailValid(email: string) {
   return /\S+@\S+\.\S+/.test(email);
@@ -15,7 +15,7 @@ function isEmailValid(email: string) {
 
 export default function Signup() {
   const signupCopy = AUTH_COPY.signup;
-  const { isAuthReady, isLoggedIn, signupWithCredentials } = useAuth();
+  const { isAuthReady, isLoggedIn, signupWithCredentials, setRcaIdentity } = useAuth();
   const { notifyError, notifyWarning } = useNotification();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -61,7 +61,11 @@ export default function Signup() {
       }
 
       try {
-        await callIntegration("/api/sync-user", {});
+        const response = await syncUser({});
+        setRcaIdentity({
+          accountId: response.accountId,
+          contactId: response.contactId,
+        });
       } catch {
         notifyWarning(signupCopy.syncWarningMessage);
       }

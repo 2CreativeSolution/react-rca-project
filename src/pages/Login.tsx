@@ -17,7 +17,8 @@ import { evaluateDecision } from "../services/salesforceApi";
 export default function Login() {
   const loginCopy = AUTH_COPY.login;
   const navigate = useNavigate();
-  const { isAuthReady, isLoggedIn, loginWithCredentials, rcaIdentity, syncRcaIdentity } = useAuth();
+  const { isAuthReady, isLoggedIn, clearDecisionSession, loginWithCredentials, rcaIdentity, setDecisionSession, syncRcaIdentity } =
+    useAuth();
   const { notifyError, notifyWarning } = useNotification();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasCredentialSubmit, setHasCredentialSubmit] = useState(false);
@@ -57,8 +58,10 @@ export default function Login() {
 
       try {
         const decision = await evaluateDecision();
-        navigate(decision.isActive ? ROUTES.dashboard : ROUTES.home, { replace: true });
+        setDecisionSession(decision);
+        navigate(decision.hasAnyActive ? ROUTES.dashboard : ROUTES.home, { replace: true });
       } catch {
+        clearDecisionSession();
         notifyWarning(loginCopy.decisionWarningMessage);
         navigate(ROUTES.home, { replace: true });
       }

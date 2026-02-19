@@ -10,7 +10,13 @@ export type SyncUserResponse = {
 };
 
 export type DecisionResponse = {
-  isActive: boolean;
+  isActiveQuote: boolean;
+  isActiveOrder: boolean;
+  isActiveAsset: boolean;
+  quoteId: string | null;
+  quoteStatus: string | null;
+  lastSelectedCatalogId: string | null;
+  hasAnyActive: boolean;
 };
 
 export type ProductSummary = {
@@ -111,14 +117,26 @@ function normalizeSyncUserResponse(raw: unknown): SyncUserResponse {
 
 function normalizeDecisionResponse(raw: unknown): DecisionResponse {
   const candidates = collectCandidateRecords(raw);
-  const isActive = findBooleanField(candidates, "isActive");
+  const isActiveQuote = findBooleanField(candidates, "isActiveQuote");
+  const isActiveOrder = findBooleanField(candidates, "isActiveOrder");
+  const isActiveAsset = findBooleanField(candidates, "isActiveAsset");
 
-  if (isActive === null) {
-    throw new Error("Decision response is missing required isActive flag.");
+  if (isActiveQuote === null || isActiveOrder === null || isActiveAsset === null) {
+    throw new Error("Decision response is missing required active-status flags.");
   }
 
+  const quoteId = findStringField(candidates, "quoteId");
+  const quoteStatus = findStringField(candidates, "quoteStatus");
+  const lastSelectedCatalogId = findStringField(candidates, "lastSelectedCatalogId");
+
   return {
-    isActive,
+    isActiveQuote,
+    isActiveOrder,
+    isActiveAsset,
+    quoteId,
+    quoteStatus,
+    lastSelectedCatalogId,
+    hasAnyActive: isActiveQuote || isActiveOrder || isActiveAsset,
   };
 }
 

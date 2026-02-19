@@ -17,7 +17,16 @@ import { evaluateDecision } from "../services/salesforceApi";
 export default function Login() {
   const loginCopy = AUTH_COPY.login;
   const navigate = useNavigate();
-  const { isAuthReady, isLoggedIn, clearDecisionSession, loginWithCredentials, rcaIdentity, setDecisionSession, syncRcaIdentity } =
+  const {
+    isAuthReady,
+    isLoggedIn,
+    clearDecisionSession,
+    decisionSession,
+    loginWithCredentials,
+    rcaIdentity,
+    setDecisionSession,
+    syncRcaIdentity,
+  } =
     useAuth();
   const { notifyError, notifyWarning } = useNotification();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -26,7 +35,8 @@ export default function Login() {
   const [password, setPassword] = useState("");
 
   if (isAuthReady && isLoggedIn && !hasCredentialSubmit) {
-    return <Navigate to={ROUTES.dashboard} replace />;
+    const hasActiveOrderAndAsset = decisionSession.isActiveOrder && decisionSession.isActiveAsset;
+    return <Navigate to={hasActiveOrderAndAsset ? ROUTES.dashboard : ROUTES.catalog} replace />;
   }
 
   const handleCredentialsSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -52,14 +62,15 @@ export default function Login() {
 
       if (!resolvedIdentity) {
         notifyWarning(loginCopy.missingIdentityWarningMessage);
-        navigate(ROUTES.home, { replace: true });
+        navigate(ROUTES.catalog, { replace: true });
         return;
       }
 
       try {
         const decision = await evaluateDecision();
         setDecisionSession(decision);
-        navigate(decision.hasAnyActive ? ROUTES.dashboard : ROUTES.home, { replace: true });
+        const hasActiveOrderAndAsset = decision.isActiveOrder && decision.isActiveAsset;
+        navigate(hasActiveOrderAndAsset ? ROUTES.dashboard : ROUTES.catalog, { replace: true });
       } catch {
         clearDecisionSession();
         notifyWarning(loginCopy.decisionWarningMessage);

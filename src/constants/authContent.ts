@@ -10,7 +10,7 @@ export const AUTH_COPY = {
     signupCta: "Create account",
     credentialErrorMessage: "Unable to sign in with credentials.",
     missingIdentityWarningMessage:
-      "Unable to find your RCA profile details. Redirecting to landing page.",
+      "Unable to find your RCA profile details. Redirecting to catalog page.",
     decisionWarningMessage:
       "Unable to verify active status right now. Redirecting to landing page.",
   },

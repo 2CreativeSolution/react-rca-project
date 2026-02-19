@@ -1,7 +1,6 @@
 import { postIntegration } from "../api/integrationClient";
 import { auth } from "../auth/firebaseClient";
 import { INTEGRATION_ROUTES } from "../constants/integrationRoutes";
-import type { RcaIdentity } from "../context/authTypes";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -11,7 +10,23 @@ export type SyncUserResponse = {
 };
 
 export type DecisionResponse = {
-  isActive: boolean;
+  isActiveQuote: boolean;
+  isActiveOrder: boolean;
+  isActiveAsset: boolean;
+  quoteId: string | null;
+  quoteStatus: string | null;
+  lastSelectedCatalogId: string | null;
+  salesTransactionId: string | null;
+  hasAnyActive: boolean;
+};
+
+export type CreateDefaultQuotePayload = {
+  accountId: string;
+  contactId: string;
+};
+
+export type CreateDefaultQuoteResponse = {
+  salesTransactionId: string;
 };
 
 export type ProductSummary = {
@@ -112,14 +127,42 @@ function normalizeSyncUserResponse(raw: unknown): SyncUserResponse {
 
 function normalizeDecisionResponse(raw: unknown): DecisionResponse {
   const candidates = collectCandidateRecords(raw);
-  const isActive = findBooleanField(candidates, "isActive");
+  const isActiveQuote = findBooleanField(candidates, "isActiveQuote");
+  const isActiveOrder = findBooleanField(candidates, "isActiveOrder");
+  const isActiveAsset = findBooleanField(candidates, "isActiveAsset");
 
-  if (isActive === null) {
-    throw new Error("Decision response is missing required isActive flag.");
+  if (isActiveQuote === null || isActiveOrder === null || isActiveAsset === null) {
+    throw new Error("Decision response is missing required active-status flags.");
+  }
+
+  const quoteId = findStringField(candidates, "quoteId");
+  const quoteStatus = findStringField(candidates, "quoteStatus");
+  const lastSelectedCatalogId = findStringField(candidates, "lastSelectedCatalogId");
+  const salesTransactionId = findStringField(candidates, "salesTransactionId");
+
+  return {
+    isActiveQuote,
+    isActiveOrder,
+    isActiveAsset,
+    quoteId,
+    quoteStatus,
+    lastSelectedCatalogId,
+    salesTransactionId,
+    hasAnyActive: isActiveQuote || isActiveOrder || isActiveAsset,
+  };
+}
+
+function normalizeCreateDefaultQuoteResponse(raw: unknown): CreateDefaultQuoteResponse {
+  const candidates = collectCandidateRecords(raw);
+  const isSuccess = findBooleanField(candidates, "isSuccess");
+  const salesTransactionId = findStringField(candidates, "salesTransactionId");
+
+  if (isSuccess !== true || !salesTransactionId) {
+    throw new Error("Create default quote response is missing success or salesTransactionId.");
   }
 
   return {
-    isActive,
+    salesTransactionId,
   };
 }
 
@@ -223,12 +266,27 @@ export async function syncUser(payload: Record<string, unknown>): Promise<SyncUs
   return normalizeSyncUserResponse(response);
 }
 
-export async function evaluateDecision(payload: RcaIdentity): Promise<DecisionResponse> {
-  const response = await callIntegration<unknown, RcaIdentity>(
+export async function evaluateDecision(): Promise<DecisionResponse> {
+  const currentUid = auth.currentUser?.uid;
+  if (!currentUid) {
+    throw new Error("User not authenticated");
+  }
+
+  const response = await callIntegration<unknown, { uId: string }>(
+    INTEGRATION_ROUTES.decisionApi,
+    { uId: currentUid }
+  );
+  return normalizeDecisionResponse(response);
+}
+
+export async function createDefaultQuote(
+  payload: CreateDefaultQuotePayload
+): Promise<CreateDefaultQuoteResponse> {
+  const response = await callIntegration<unknown, CreateDefaultQuotePayload>(
     INTEGRATION_ROUTES.createDefaultQuote,
     payload
   );
-  return normalizeDecisionResponse(response);
+  return normalizeCreateDefaultQuoteResponse(response);
 }
 
 export async function listProducts(

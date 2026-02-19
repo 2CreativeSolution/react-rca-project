@@ -10,14 +10,22 @@ import {
 } from "firebase/auth";
 import { auth } from "../auth/firebaseClient";
 import {
+  clearDecisionSession as clearDecisionSessionStorage,
   clearRcaIdentityStorage,
+  getDefaultDecisionSession,
+  getDefaultRcaSyncStatus,
+  readDecisionSession,
   readRcaIdentity,
+  readRcaSyncStatus,
+  writeDecisionSession,
   writeRcaIdentity,
+  writeRcaSyncStatus,
 } from "../services/auth/rcaIdentityStorage";
 import { clearCatalogOptionsCache } from "../services/catalog/catalogService";
+import { createDefaultQuote, syncUser } from "../services/salesforceApi";
 import { requestPasswordReset } from "../services/auth/passwordResetService";
 import { AuthContext } from "./AuthContext";
-import type { RcaIdentity, SignupResult } from "./authTypes";
+import type { DecisionSession, RcaIdentity, RcaSyncStatus, SignupResult } from "./authTypes";
 
 async function resolveAccessToken(user: User | null): Promise<string | null> {
   if (!user) {
@@ -31,10 +39,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
   const [rcaIdentity, setRcaIdentityState] = useState<RcaIdentity | null>(() => readRcaIdentity());
+  const [rcaSyncStatus, setRcaSyncStatus] = useState<RcaSyncStatus>(() => getDefaultRcaSyncStatus());
+  const [decisionSession, setDecisionSessionState] = useState<DecisionSession>(() => getDefaultDecisionSession());
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (nextUser: User | null) => {
       setCurrentUser(nextUser);
+      if (nextUser?.uid) {
+        setRcaSyncStatus(readRcaSyncStatus(nextUser.uid));
+        setDecisionSessionState(readDecisionSession(nextUser.uid));
+      } else {
+        setRcaSyncStatus(getDefaultRcaSyncStatus());
+        setDecisionSessionState(getDefaultDecisionSession());
+      }
       setIsAuthReady(true);
     });
 
@@ -76,8 +93,112 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     writeRcaIdentity(identity);
   };
 
+  const markSyncFailure = (errorMessage?: string) => {
+    const user = auth.currentUser ?? currentUser;
+    if (!user?.uid) {
+      return;
+    }
+
+    const timestamp = new Date().toISOString();
+    setRcaSyncStatus((previous) => {
+      const next: RcaSyncStatus = {
+        state: "failed",
+        lastAttemptAt: timestamp,
+        lastSuccessAt: previous.lastSuccessAt,
+        lastFailedAt: timestamp,
+        lastErrorMessage: errorMessage ?? null,
+      };
+      writeRcaSyncStatus(user.uid, next);
+      return next;
+    });
+  };
+
+  const markSyncSuccess = () => {
+    const user = auth.currentUser ?? currentUser;
+    if (!user?.uid) {
+      return;
+    }
+
+    const timestamp = new Date().toISOString();
+    setRcaSyncStatus(() => {
+      const next: RcaSyncStatus = {
+        state: "synced",
+        lastAttemptAt: timestamp,
+        lastSuccessAt: timestamp,
+        lastFailedAt: null,
+        lastErrorMessage: null,
+      };
+      writeRcaSyncStatus(user.uid, next);
+      return next;
+    });
+  };
+
+  const syncRcaIdentity = async (): Promise<{ success: boolean; identity: RcaIdentity | null }> => {
+    try {
+      const response = await syncUser({});
+      const identity = {
+        accountId: response.accountId,
+        contactId: response.contactId,
+      };
+      setRcaIdentity(identity);
+      markSyncSuccess();
+      return { success: true, identity };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : undefined;
+      markSyncFailure(errorMessage);
+      return { success: false, identity: null };
+    }
+  };
+
+  const retryRcaSync = async (): Promise<boolean> => {
+    const result = await syncRcaIdentity();
+    return result.success;
+  };
+
+  const initializeDefaultQuote = async (
+    identity: RcaIdentity
+  ): Promise<{ success: boolean; salesTransactionId: string | null }> => {
+    try {
+      const response = await createDefaultQuote({
+        accountId: identity.accountId,
+        contactId: identity.contactId,
+      });
+      setDecisionSessionState((previous) => {
+        const next: DecisionSession = {
+          ...previous,
+          salesTransactionId: response.salesTransactionId,
+        };
+        const user = auth.currentUser ?? currentUser;
+        if (user?.uid) {
+          writeDecisionSession(user.uid, next);
+        }
+        return next;
+      });
+      return { success: true, salesTransactionId: response.salesTransactionId };
+    } catch {
+      return { success: false, salesTransactionId: null };
+    }
+  };
+
+  const setDecisionSession = (session: DecisionSession) => {
+    setDecisionSessionState(session);
+    const user = auth.currentUser ?? currentUser;
+    if (user?.uid) {
+      writeDecisionSession(user.uid, session);
+    }
+  };
+
+  const clearDecisionSession = () => {
+    setDecisionSessionState(getDefaultDecisionSession());
+    const user = auth.currentUser ?? currentUser;
+    if (user?.uid) {
+      clearDecisionSessionStorage(user.uid);
+    }
+  };
+
   const clearRcaIdentity = () => {
     setRcaIdentityState(null);
+    clearDecisionSession();
     clearRcaIdentityStorage();
     clearCatalogOptionsCache();
   };
@@ -96,8 +217,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoggedIn,
         currentUser,
         rcaIdentity,
+        rcaSyncStatus,
+        decisionSession,
         loginWithCredentials,
         signupWithCredentials,
+        syncRcaIdentity,
+        initializeDefaultQuote,
+        retryRcaSync,
+        setDecisionSession,
+        clearDecisionSession,
         setRcaIdentity,
         clearRcaIdentity,
         requestPasswordReset,

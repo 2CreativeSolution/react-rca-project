@@ -9,13 +9,42 @@ export type RcaIdentity = {
   contactId: string;
 };
 
+export type RcaSyncState = "unknown" | "failed" | "synced";
+
+export type RcaSyncStatus = {
+  state: RcaSyncState;
+  lastAttemptAt: string | null;
+  lastSuccessAt: string | null;
+  lastFailedAt: string | null;
+  lastErrorMessage: string | null;
+};
+
+export type DecisionSession = {
+  isActiveQuote: boolean;
+  isActiveOrder: boolean;
+  isActiveAsset: boolean;
+  quoteId: string | null;
+  quoteStatus: string | null;
+  lastSelectedCatalogId: string | null;
+  salesTransactionId: string | null;
+};
+
 export type AuthContextType = {
   isAuthReady: boolean;
   isLoggedIn: boolean;
   currentUser: User | null;
   rcaIdentity: RcaIdentity | null;
+  rcaSyncStatus: RcaSyncStatus;
+  decisionSession: DecisionSession;
   loginWithCredentials: (email: string, password: string) => Promise<void>;
   signupWithCredentials: (fullName: string, email: string, password: string) => Promise<SignupResult>;
+  syncRcaIdentity: () => Promise<{ success: boolean; identity: RcaIdentity | null }>;
+  initializeDefaultQuote: (
+    identity: RcaIdentity
+  ) => Promise<{ success: boolean; salesTransactionId: string | null }>;
+  retryRcaSync: () => Promise<boolean>;
+  setDecisionSession: (session: DecisionSession) => void;
+  clearDecisionSession: () => void;
   setRcaIdentity: (identity: RcaIdentity) => void;
   clearRcaIdentity: () => void;
   requestPasswordReset: (email: string) => Promise<void>;

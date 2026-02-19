@@ -7,7 +7,6 @@ import { AUTH_COPY } from "../constants/authContent";
 import { ROUTES } from "../constants/routes";
 import { useAuth } from "../context/useAuth";
 import { useNotification } from "../context/useNotification";
-import { syncUser } from "../services/salesforceApi";
 
 function isEmailValid(email: string) {
   return /\S+@\S+\.\S+/.test(email);
@@ -15,7 +14,7 @@ function isEmailValid(email: string) {
 
 export default function Signup() {
   const signupCopy = AUTH_COPY.signup;
-  const { isAuthReady, isLoggedIn, signupWithCredentials, setRcaIdentity } = useAuth();
+  const { initializeDefaultQuote, isAuthReady, isLoggedIn, signupWithCredentials, syncRcaIdentity } = useAuth();
   const { notifyError, notifyWarning } = useNotification();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -60,14 +59,17 @@ export default function Signup() {
         notifyWarning(signupCopy.profileWarningMessage);
       }
 
-      try {
-        const response = await syncUser({});
-        setRcaIdentity({
-          accountId: response.accountId,
-          contactId: response.contactId,
-        });
-      } catch {
+      const syncResult = await syncRcaIdentity();
+      if (!syncResult.success) {
         notifyWarning(signupCopy.syncWarningMessage);
+        return;
+      }
+
+      if (syncResult.identity) {
+        const defaultQuoteResult = await initializeDefaultQuote(syncResult.identity);
+        if (!defaultQuoteResult.success) {
+          notifyWarning(signupCopy.defaultQuoteWarningMessage);
+        }
       }
     } catch (error) {
       notifyError(error instanceof Error ? error.message : signupCopy.fallbackErrorMessage);

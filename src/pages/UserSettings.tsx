@@ -1,8 +1,10 @@
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import LockResetOutlinedIcon from "@mui/icons-material/LockResetOutlined";
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
+import PendingActionsOutlinedIcon from "@mui/icons-material/PendingActionsOutlined";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import SecurityOutlinedIcon from "@mui/icons-material/SecurityOutlined";
+import SyncProblemOutlinedIcon from "@mui/icons-material/SyncProblemOutlined";
 import VerifiedUserOutlinedIcon from "@mui/icons-material/VerifiedUserOutlined";
 import { Avatar, Button, Chip, Grid, Paper, Skeleton, Stack, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
@@ -17,9 +19,11 @@ import { useNotification } from "../context/useNotification";
 
 export default function UserSettings() {
   const settingsCopy = PRODUCT_COPY.settings;
-  const { isAuthReady, isLoggedIn, currentUser, requestPasswordReset, logout } = useAuth();
+  const { isAuthReady, isLoggedIn, currentUser, requestPasswordReset, logout, rcaSyncStatus, decisionSession, retryRcaSync } =
+    useAuth();
   const { notifyError, notifySuccess } = useNotification();
   const [isSendingReset, setIsSendingReset] = useState(false);
+  const [isRetryingSync, setIsRetryingSync] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   const accountEmail = currentUser?.email?.trim() ?? "";
@@ -65,6 +69,40 @@ export default function UserSettings() {
       setIsSigningOut(false);
     }
   };
+
+  const handleRetrySync = async () => {
+    setIsRetryingSync(true);
+    try {
+      const didSucceed = await retryRcaSync();
+      if (didSucceed) {
+        notifySuccess(settingsCopy.retrySyncSuccessMessage);
+      } else {
+        notifyError(settingsCopy.retrySyncFallbackErrorMessage);
+      }
+    } finally {
+      setIsRetryingSync(false);
+    }
+  };
+
+  const syncStatusLabel =
+    rcaSyncStatus.state === "failed"
+      ? settingsCopy.syncStateFailedLabel
+      : rcaSyncStatus.state === "synced"
+        ? settingsCopy.syncStateSyncedLabel
+        : settingsCopy.syncStateUnknownLabel;
+
+  const syncStatusMessage =
+    rcaSyncStatus.state === "failed"
+      ? settingsCopy.syncFailedMessage
+      : rcaSyncStatus.state === "synced"
+        ? settingsCopy.syncSuccessMessage
+        : settingsCopy.syncUnknownMessage;
+
+  const decisionItems = [
+    { label: settingsCopy.activeQuoteLabel, isActive: decisionSession.isActiveQuote },
+    { label: settingsCopy.activeOrderLabel, isActive: decisionSession.isActiveOrder },
+    { label: settingsCopy.activeAssetLabel, isActive: decisionSession.isActiveAsset },
+  ];
 
   if (!isAuthReady) {
     return (
@@ -187,6 +225,53 @@ export default function UserSettings() {
               >
                 {settingsCopy.signOutCta}
               </Button>
+            </SettingsSectionCard>
+
+            <SettingsSectionCard
+              icon={<SyncProblemOutlinedIcon color="action" fontSize="small" />}
+              title={settingsCopy.syncSectionTitle}
+            >
+              <Stack spacing={1}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Typography variant="subtitle2">{settingsCopy.statusLabel}</Typography>
+                  <Chip
+                    size="small"
+                    label={syncStatusLabel}
+                    color={rcaSyncStatus.state === "failed" ? "warning" : rcaSyncStatus.state === "synced" ? "success" : "default"}
+                    variant="outlined"
+                  />
+                </Stack>
+                <Typography variant="body2" color="text.secondary">
+                  {syncStatusMessage}
+                </Typography>
+                <Button
+                  variant="outlined"
+                  onClick={() => void handleRetrySync()}
+                  disabled={isRetryingSync}
+                  sx={{ alignSelf: "flex-start" }}
+                >
+                  {settingsCopy.retrySyncCta}
+                </Button>
+              </Stack>
+            </SettingsSectionCard>
+
+            <SettingsSectionCard
+              icon={<PendingActionsOutlinedIcon color="action" fontSize="small" />}
+              title={settingsCopy.decisionSectionTitle}
+            >
+              <Stack spacing={1}>
+                {decisionItems.map((item) => (
+                  <Stack key={item.label} direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                    <Typography variant="subtitle2">{item.label}</Typography>
+                    <Chip
+                      size="small"
+                      label={item.isActive ? settingsCopy.decisionActiveLabel : settingsCopy.decisionInactiveLabel}
+                      color={item.isActive ? "success" : "default"}
+                      variant="outlined"
+                    />
+                  </Stack>
+                ))}
+              </Stack>
             </SettingsSectionCard>
           </Stack>
         </Grid>

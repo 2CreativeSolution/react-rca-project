@@ -3,7 +3,8 @@ export const INTEGRATION_ROUTES = {
   listCatalogs: "/api/listCatalogs",
   listProducts: "/api/listProducts",
   getProductDetails: "/api/getProductDetails",
+  getQuotesWithQuoteLines: "/api/getQuotesWithQuoteLines",
   createOrdersFromQuote: "/api/createOrdersFromQuote",
   createDefaultQuote: "/api/createDefaultQuote",
+  decisionApi: "/api/decisionapi",
 } as const;
-

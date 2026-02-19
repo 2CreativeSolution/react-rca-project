@@ -1,19 +1,26 @@
+import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 import { CircularProgress, FormControl, InputLabel, MenuItem, Paper, Select, Stack, Typography } from "@mui/material";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import FilterToolbar from "../components/filters/FilterToolbar";
 import { useNavigate } from "react-router-dom";
 import ProductDetailsDialog from "../components/product/ProductDetailsDialog";
 import ProductList from "../components/product/ProductList";
+import { catalogGlassSurfaceSx } from "../components/catalog/styles";
 import { PRODUCT_COPY } from "../constants/productContent";
 import { ROUTES } from "../constants/routes";
 import { useNotification } from "../context/useNotification";
 import { getCatalogOptions, type CatalogOption } from "../services/catalog/catalogService";
 import { listProducts, type ProductSummary } from "../services/salesforceApi";
 
+const UNCATEGORIZED_FILTER_VALUE = "__filter_uncategorized__";
+
 export default function ProductLanding() {
   const productLandingCopy = PRODUCT_COPY.landing;
   const [catalogOptions, setCatalogOptions] = useState<CatalogOption[]>([]);
   const [selectedCatalogId, setSelectedCatalogId] = useState("");
   const [products, setProducts] = useState<ProductSummary[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedProduct, setSelectedProduct] = useState<ProductSummary | null>(null);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
   const [isProductsLoading, setIsProductsLoading] = useState(false);
@@ -92,6 +99,69 @@ export default function ProductLanding() {
     };
   }, [notifyError, productLandingCopy.fallbackErrorMessage, selectedCatalogId]);
 
+  useEffect(() => {
+    setSearchTerm("");
+    setSelectedCategory("all");
+  }, [selectedCatalogId]);
+
+  const categoryFilterOptions = useMemo(() => {
+    const categorySet = new Set<string>();
+    let hasUncategorizedProducts = false;
+
+    for (const product of products) {
+      if (!product.categories.length) {
+        hasUncategorizedProducts = true;
+        continue;
+      }
+
+      for (const category of product.categories) {
+        if (category.trim().length > 0) {
+          categorySet.add(category);
+        }
+      }
+    }
+
+    const sortedCategories = [...categorySet].sort((a, b) => a.localeCompare(b));
+
+    return [
+      { value: "all", label: productLandingCopy.allCategoriesLabel },
+      ...sortedCategories.map((category) => ({ value: category, label: category })),
+      ...(hasUncategorizedProducts
+        ? [{ value: UNCATEGORIZED_FILTER_VALUE, label: productLandingCopy.uncategorizedLabel }]
+        : []),
+    ];
+  }, [productLandingCopy.allCategoriesLabel, productLandingCopy.uncategorizedLabel, products]);
+
+  const filteredProducts = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    const categoryFiltered =
+      selectedCategory === "all"
+        ? products
+        : selectedCategory === UNCATEGORIZED_FILTER_VALUE
+          ? products.filter((product) => product.categories.length === 0)
+          : products.filter((product) => product.categories.includes(selectedCategory));
+
+    if (!normalizedSearch) {
+      return categoryFiltered;
+    }
+
+    return categoryFiltered.filter((product) => {
+      const haystack = [product.name, product.productCode ?? "", product.categories.join(" ")]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(normalizedSearch);
+    });
+  }, [products, searchTerm, selectedCategory]);
+
+  const hasActiveProductFilters = searchTerm.trim().length > 0 || selectedCategory !== "all";
+
+  useEffect(() => {
+    const isSelectedOptionPresent = categoryFilterOptions.some((option) => option.value === selectedCategory);
+    if (!isSelectedOptionPresent) {
+      setSelectedCategory("all");
+    }
+  }, [categoryFilterOptions, selectedCategory]);
+
   if (isCatalogLoading) {
     return (
       <Stack alignItems="center" justifyContent="center" spacing={1.5} sx={{ py: 10 }}>
@@ -125,6 +195,45 @@ export default function ProductLanding() {
         </FormControl>
       </Paper>
 
+      <Paper
+        variant="outlined"
+        sx={{
+          ...catalogGlassSurfaceSx,
+          px: { xs: 2.5, md: 3 },
+          py: { xs: 2.25, md: 2.75 },
+          borderRadius: 3,
+        }}
+      >
+        <Stack spacing={1.25}>
+          <Stack direction="row" alignItems="center" spacing={0.75}>
+            <TuneOutlinedIcon fontSize="small" color="action" />
+            <Typography variant="body2" color="text.secondary">
+              {productLandingCopy.filtersTitle}
+            </Typography>
+          </Stack>
+          <FilterToolbar
+            search={{
+              clearLabel: productLandingCopy.clearSearchLabel,
+              label: productLandingCopy.searchLabel,
+              onChange: setSearchTerm,
+              onClear: () => setSearchTerm(""),
+              placeholder: productLandingCopy.searchPlaceholder,
+              value: searchTerm,
+            }}
+            primarySelect={{
+              label: productLandingCopy.categoryFilterLabel,
+              onChange: setSelectedCategory,
+              options: categoryFilterOptions,
+              value: selectedCategory,
+            }}
+            resultCount={{
+              label: productLandingCopy.resultCountLabel,
+              value: filteredProducts.length,
+            }}
+          />
+        </Stack>
+      </Paper>
+
       <ProductList
         catalogOptionsCount={catalogOptions.length}
         isProductsLoading={isProductsLoading}
@@ -132,7 +241,7 @@ export default function ProductLanding() {
           addToCartCtaLabel: productLandingCopy.addToCartCtaLabel,
           availabilityLabel: productLandingCopy.availabilityLabel,
           emptyCatalogMessage: productLandingCopy.emptyCatalogMessage,
-          emptyMessage: productLandingCopy.emptyMessage,
+          emptyMessage: hasActiveProductFilters ? productLandingCopy.emptyFilteredMessage : productLandingCopy.emptyMessage,
           loadingMessage: productLandingCopy.loadingMessage,
           notAvailableLabel: productLandingCopy.notAvailableLabel,
           productCodeLabel: productLandingCopy.productCodeLabel,
@@ -140,7 +249,7 @@ export default function ProductLanding() {
         }}
         onAddToCart={() => navigate(ROUTES.cart)}
         onSelectProduct={setSelectedProduct}
-        products={products}
+        products={filteredProducts}
       />
 
       <ProductDetailsDialog

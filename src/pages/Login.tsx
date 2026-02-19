@@ -11,13 +11,23 @@ import { AUTH_COPY } from "../constants/authContent";
 import { ROUTES } from "../constants/routes";
 import { useAuth } from "../context/useAuth";
 import { useNotification } from "../context/useNotification";
-import { evaluateDecision, syncUser } from "../services/salesforceApi";
+import { evaluateDecision } from "../services/salesforceApi";
 
 
 export default function Login() {
   const loginCopy = AUTH_COPY.login;
   const navigate = useNavigate();
-  const { isAuthReady, isLoggedIn, loginWithCredentials, rcaIdentity, setRcaIdentity } = useAuth();
+  const {
+    isAuthReady,
+    isLoggedIn,
+    clearDecisionSession,
+    decisionSession,
+    loginWithCredentials,
+    rcaIdentity,
+    setDecisionSession,
+    syncRcaIdentity,
+  } =
+    useAuth();
   const { notifyError, notifyWarning } = useNotification();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasCredentialSubmit, setHasCredentialSubmit] = useState(false);
@@ -25,7 +35,8 @@ export default function Login() {
   const [password, setPassword] = useState("");
 
   if (isAuthReady && isLoggedIn && !hasCredentialSubmit) {
-    return <Navigate to={ROUTES.dashboard} replace />;
+    const hasActiveOrderAndAsset = decisionSession.isActiveOrder && decisionSession.isActiveAsset;
+    return <Navigate to={hasActiveOrderAndAsset ? ROUTES.dashboard : ROUTES.catalog} replace />;
   }
 
   const handleCredentialsSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -38,28 +49,30 @@ export default function Login() {
 
       let resolvedIdentity = rcaIdentity;
       if (!resolvedIdentity) {
-        try {
-          const syncedIdentity = await syncUser({});
+        const syncResult = await syncRcaIdentity();
+        if (syncResult.success && syncResult.identity) {
           resolvedIdentity = {
-            accountId: syncedIdentity.accountId,
-            contactId: syncedIdentity.contactId,
+            accountId: syncResult.identity.accountId,
+            contactId: syncResult.identity.contactId,
           };
-          setRcaIdentity(resolvedIdentity);
-        } catch {
+        } else {
           resolvedIdentity = null;
         }
       }
 
       if (!resolvedIdentity) {
         notifyWarning(loginCopy.missingIdentityWarningMessage);
-        navigate(ROUTES.home, { replace: true });
+        navigate(ROUTES.catalog, { replace: true });
         return;
       }
 
       try {
-        const decision = await evaluateDecision(resolvedIdentity);
-        navigate(decision.isActive ? ROUTES.dashboard : ROUTES.home, { replace: true });
+        const decision = await evaluateDecision();
+        setDecisionSession(decision);
+        const hasActiveOrderAndAsset = decision.isActiveOrder && decision.isActiveAsset;
+        navigate(hasActiveOrderAndAsset ? ROUTES.dashboard : ROUTES.catalog, { replace: true });
       } catch {
+        clearDecisionSession();
         notifyWarning(loginCopy.decisionWarningMessage);
         navigate(ROUTES.home, { replace: true });
       }

@@ -1,7 +1,6 @@
 import { postIntegration } from "../api/integrationClient";
 import { auth } from "../auth/firebaseClient";
 import { INTEGRATION_ROUTES } from "../constants/integrationRoutes";
-import type { RcaIdentity } from "../context/authTypes";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -223,10 +222,15 @@ export async function syncUser(payload: Record<string, unknown>): Promise<SyncUs
   return normalizeSyncUserResponse(response);
 }
 
-export async function evaluateDecision(payload: RcaIdentity): Promise<DecisionResponse> {
-  const response = await callIntegration<unknown, RcaIdentity>(
-    INTEGRATION_ROUTES.createDefaultQuote,
-    payload
+export async function evaluateDecision(): Promise<DecisionResponse> {
+  const currentUid = auth.currentUser?.uid;
+  if (!currentUid) {
+    throw new Error("User not authenticated");
+  }
+
+  const response = await callIntegration<unknown, { uId: string }>(
+    INTEGRATION_ROUTES.decisionApi,
+    { uId: currentUid }
   );
   return normalizeDecisionResponse(response);
 }

@@ -56,7 +56,7 @@ export default function Login() {
       }
 
       try {
-        const decision = await evaluateDecision(resolvedIdentity);
+        const decision = await evaluateDecision();
         navigate(decision.isActive ? ROUTES.dashboard : ROUTES.home, { replace: true });
       } catch {
         notifyWarning(loginCopy.decisionWarningMessage);

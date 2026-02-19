@@ -3,6 +3,7 @@ import LockResetOutlinedIcon from "@mui/icons-material/LockResetOutlined";
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import SecurityOutlinedIcon from "@mui/icons-material/SecurityOutlined";
+import SyncProblemOutlinedIcon from "@mui/icons-material/SyncProblemOutlined";
 import VerifiedUserOutlinedIcon from "@mui/icons-material/VerifiedUserOutlined";
 import { Avatar, Button, Chip, Grid, Paper, Skeleton, Stack, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
@@ -17,9 +18,10 @@ import { useNotification } from "../context/useNotification";
 
 export default function UserSettings() {
   const settingsCopy = PRODUCT_COPY.settings;
-  const { isAuthReady, isLoggedIn, currentUser, requestPasswordReset, logout } = useAuth();
+  const { isAuthReady, isLoggedIn, currentUser, requestPasswordReset, logout, rcaSyncStatus, retryRcaSync } = useAuth();
   const { notifyError, notifySuccess } = useNotification();
   const [isSendingReset, setIsSendingReset] = useState(false);
+  const [isRetryingSync, setIsRetryingSync] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   const accountEmail = currentUser?.email?.trim() ?? "";
@@ -65,6 +67,34 @@ export default function UserSettings() {
       setIsSigningOut(false);
     }
   };
+
+  const handleRetrySync = async () => {
+    setIsRetryingSync(true);
+    try {
+      const didSucceed = await retryRcaSync();
+      if (didSucceed) {
+        notifySuccess(settingsCopy.retrySyncSuccessMessage);
+      } else {
+        notifyError(settingsCopy.retrySyncFallbackErrorMessage);
+      }
+    } finally {
+      setIsRetryingSync(false);
+    }
+  };
+
+  const syncStatusLabel =
+    rcaSyncStatus.state === "failed"
+      ? settingsCopy.syncStateFailedLabel
+      : rcaSyncStatus.state === "synced"
+        ? settingsCopy.syncStateSyncedLabel
+        : settingsCopy.syncStateUnknownLabel;
+
+  const syncStatusMessage =
+    rcaSyncStatus.state === "failed"
+      ? settingsCopy.syncFailedMessage
+      : rcaSyncStatus.state === "synced"
+        ? settingsCopy.syncSuccessMessage
+        : settingsCopy.syncUnknownMessage;
 
   if (!isAuthReady) {
     return (
@@ -187,6 +217,34 @@ export default function UserSettings() {
               >
                 {settingsCopy.signOutCta}
               </Button>
+            </SettingsSectionCard>
+
+            <SettingsSectionCard
+              icon={<SyncProblemOutlinedIcon color="action" fontSize="small" />}
+              title={settingsCopy.syncSectionTitle}
+            >
+              <Stack spacing={1}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Typography variant="subtitle2">{settingsCopy.statusLabel}</Typography>
+                  <Chip
+                    size="small"
+                    label={syncStatusLabel}
+                    color={rcaSyncStatus.state === "failed" ? "warning" : rcaSyncStatus.state === "synced" ? "success" : "default"}
+                    variant="outlined"
+                  />
+                </Stack>
+                <Typography variant="body2" color="text.secondary">
+                  {syncStatusMessage}
+                </Typography>
+                <Button
+                  variant="outlined"
+                  onClick={() => void handleRetrySync()}
+                  disabled={isRetryingSync}
+                  sx={{ alignSelf: "flex-start" }}
+                >
+                  {settingsCopy.retrySyncCta}
+                </Button>
+              </Stack>
             </SettingsSectionCard>
           </Stack>
         </Grid>

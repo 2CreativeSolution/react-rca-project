@@ -11,13 +11,13 @@ import { AUTH_COPY } from "../constants/authContent";
 import { ROUTES } from "../constants/routes";
 import { useAuth } from "../context/useAuth";
 import { useNotification } from "../context/useNotification";
-import { evaluateDecision, syncUser } from "../services/salesforceApi";
+import { evaluateDecision } from "../services/salesforceApi";
 
 
 export default function Login() {
   const loginCopy = AUTH_COPY.login;
   const navigate = useNavigate();
-  const { isAuthReady, isLoggedIn, loginWithCredentials, rcaIdentity, setRcaIdentity } = useAuth();
+  const { isAuthReady, isLoggedIn, loginWithCredentials, rcaIdentity, syncRcaIdentity } = useAuth();
   const { notifyError, notifyWarning } = useNotification();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasCredentialSubmit, setHasCredentialSubmit] = useState(false);
@@ -38,14 +38,13 @@ export default function Login() {
 
       let resolvedIdentity = rcaIdentity;
       if (!resolvedIdentity) {
-        try {
-          const syncedIdentity = await syncUser({});
+        const syncResult = await syncRcaIdentity();
+        if (syncResult.success && syncResult.identity) {
           resolvedIdentity = {
-            accountId: syncedIdentity.accountId,
-            contactId: syncedIdentity.contactId,
+            accountId: syncResult.identity.accountId,
+            contactId: syncResult.identity.contactId,
           };
-          setRcaIdentity(resolvedIdentity);
-        } catch {
+        } else {
           resolvedIdentity = null;
         }
       }

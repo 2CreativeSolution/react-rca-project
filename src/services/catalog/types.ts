@@ -44,8 +44,6 @@ export type CatalogItem = {
 export type CatalogPageData = {
   items: CatalogItem[];
   count: number;
-  correlationId: string;
-  statusMessage: string;
 };
 
 export type CatalogSortBy = "nameAsc" | "nameDesc" | "categoriesDesc" | "categoriesAsc";

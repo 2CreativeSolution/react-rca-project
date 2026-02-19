@@ -1,8 +1,8 @@
 import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 import { CircularProgress, FormControl, InputLabel, MenuItem, Paper, Select, Stack, Typography } from "@mui/material";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import FilterToolbar from "../components/filters/FilterToolbar";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import ProductDetailsDialog from "../components/product/ProductDetailsDialog";
 import ProductList from "../components/product/ProductList";
 import { catalogGlassSurfaceSx } from "../components/catalog/styles";
@@ -24,6 +24,9 @@ export default function ProductLanding() {
   const [selectedProduct, setSelectedProduct] = useState<ProductSummary | null>(null);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
   const [isProductsLoading, setIsProductsLoading] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedCatalogParam = searchParams.get("catalogId")?.trim() ?? "";
+  const initialCatalogParamRef = useRef(selectedCatalogParam);
   const navigate = useNavigate();
   const { notifyError } = useNotification();
 
@@ -34,6 +37,10 @@ export default function ProductLanding() {
       setCatalogOptions(result);
       if (result.length > 0) {
         setSelectedCatalogId((prevCatalogId) => {
+          const preferredCatalogId = initialCatalogParamRef.current;
+          if (preferredCatalogId && result.some((option) => option.id === preferredCatalogId)) {
+            return preferredCatalogId;
+          }
           if (prevCatalogId && result.some((option) => option.id === prevCatalogId)) {
             return prevCatalogId;
           }
@@ -59,7 +66,28 @@ export default function ProductLanding() {
   }, [loadCatalogOptions]);
 
   useEffect(() => {
-    if (!selectedCatalogId) {
+    if (!selectedCatalogParam) {
+      return;
+    }
+
+    if (!catalogOptions.some((option) => option.id === selectedCatalogParam)) {
+      return;
+    }
+
+    if (selectedCatalogParam !== selectedCatalogId) {
+      setSelectedCatalogId(selectedCatalogParam);
+    }
+  }, [catalogOptions, selectedCatalogId, selectedCatalogParam]);
+
+  useEffect(() => {
+    const hasValidCatalogParam =
+      selectedCatalogParam.length > 0 && catalogOptions.some((option) => option.id === selectedCatalogParam);
+
+    if (!selectedCatalogId || isCatalogLoading) {
+      return;
+    }
+
+    if (hasValidCatalogParam && selectedCatalogId !== selectedCatalogParam) {
       return;
     }
 
@@ -97,12 +125,33 @@ export default function ProductLanding() {
     return () => {
       isCurrentSelection = false;
     };
-  }, [notifyError, productLandingCopy.fallbackErrorMessage, selectedCatalogId]);
+  }, [
+    catalogOptions,
+    isCatalogLoading,
+    notifyError,
+    productLandingCopy.fallbackErrorMessage,
+    selectedCatalogId,
+    selectedCatalogParam,
+  ]);
 
   useEffect(() => {
     setSearchTerm("");
     setSelectedCategory("all");
   }, [selectedCatalogId]);
+
+  useEffect(() => {
+    if (!selectedCatalogId) {
+      return;
+    }
+
+    if (selectedCatalogId === selectedCatalogParam) {
+      return;
+    }
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("catalogId", selectedCatalogId);
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, selectedCatalogId, selectedCatalogParam, setSearchParams]);
 
   const categoryFilterOptions = useMemo(() => {
     const categorySet = new Set<string>();

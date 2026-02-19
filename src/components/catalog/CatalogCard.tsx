@@ -18,9 +18,9 @@ import { catalogPremiumCardSx } from "./styles";
 
 type CatalogCardProps = {
   item: CatalogItem;
-  onOpenDetails: (item: CatalogItem) => void;
+  onViewProducts: (item: CatalogItem) => void;
   labels: {
-    detailsCtaLabel: string;
+    viewProductsCtaLabel: string;
     categoriesLabel: string;
     codeLabel: string;
     startDateLabel: string;
@@ -41,7 +41,7 @@ function dateRangeLabel(item: CatalogItem, labels: CatalogCardProps["labels"]) {
   return null;
 }
 
-export default function CatalogCard({ item, onOpenDetails, labels }: CatalogCardProps) {
+export default function CatalogCard({ item, onViewProducts, labels }: CatalogCardProps) {
   const effectiveDateLabel = dateRangeLabel(item, labels);
   const pillSx = {
     px: 0.65,
@@ -129,7 +129,7 @@ export default function CatalogCard({ item, onOpenDetails, labels }: CatalogCard
       <CardActions sx={{ px: 2, pb: 2 }}>
         <Button
           variant="outlined"
-          onClick={() => onOpenDetails(item)}
+          onClick={() => onViewProducts(item)}
           sx={{
             "&:focus-visible": {
               outline: "2px solid",
@@ -138,7 +138,7 @@ export default function CatalogCard({ item, onOpenDetails, labels }: CatalogCard
             },
           }}
         >
-          {labels.detailsCtaLabel}
+          {labels.viewProductsCtaLabel}
         </Button>
       </CardActions>
     </Card>

@@ -76,6 +76,7 @@ export function getDefaultDecisionSession(): DecisionSession {
     quoteId: null,
     quoteStatus: null,
     lastSelectedCatalogId: null,
+    salesTransactionId: null,
   };
 }
 
@@ -91,6 +92,7 @@ function toDecisionSession(raw: unknown): DecisionSession {
     quoteId: asNullableString(raw.quoteId),
     quoteStatus: asNullableString(raw.quoteStatus),
     lastSelectedCatalogId: asNullableString(raw.lastSelectedCatalogId),
+    salesTransactionId: asNullableString(raw.salesTransactionId),
   };
 }
 

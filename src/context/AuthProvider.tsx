@@ -22,7 +22,7 @@ import {
   writeRcaSyncStatus,
 } from "../services/auth/rcaIdentityStorage";
 import { clearCatalogOptionsCache } from "../services/catalog/catalogService";
-import { syncUser } from "../services/salesforceApi";
+import { createDefaultQuote, syncUser } from "../services/salesforceApi";
 import { requestPasswordReset } from "../services/auth/passwordResetService";
 import { AuthContext } from "./AuthContext";
 import type { DecisionSession, RcaIdentity, RcaSyncStatus, SignupResult } from "./authTypes";
@@ -155,6 +155,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return result.success;
   };
 
+  const initializeDefaultQuote = async (
+    identity: RcaIdentity
+  ): Promise<{ success: boolean; salesTransactionId: string | null }> => {
+    try {
+      const response = await createDefaultQuote({
+        accountId: identity.accountId,
+        contactId: identity.contactId,
+      });
+      setDecisionSessionState((previous) => {
+        const next: DecisionSession = {
+          ...previous,
+          salesTransactionId: response.salesTransactionId,
+        };
+        const user = auth.currentUser ?? currentUser;
+        if (user?.uid) {
+          writeDecisionSession(user.uid, next);
+        }
+        return next;
+      });
+      return { success: true, salesTransactionId: response.salesTransactionId };
+    } catch {
+      return { success: false, salesTransactionId: null };
+    }
+  };
+
   const setDecisionSession = (session: DecisionSession) => {
     setDecisionSessionState(session);
     const user = auth.currentUser ?? currentUser;
@@ -197,6 +222,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loginWithCredentials,
         signupWithCredentials,
         syncRcaIdentity,
+        initializeDefaultQuote,
         retryRcaSync,
         setDecisionSession,
         clearDecisionSession,

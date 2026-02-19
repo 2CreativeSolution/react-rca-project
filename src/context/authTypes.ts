@@ -26,6 +26,7 @@ export type DecisionSession = {
   quoteId: string | null;
   quoteStatus: string | null;
   lastSelectedCatalogId: string | null;
+  salesTransactionId: string | null;
 };
 
 export type AuthContextType = {
@@ -38,6 +39,9 @@ export type AuthContextType = {
   loginWithCredentials: (email: string, password: string) => Promise<void>;
   signupWithCredentials: (fullName: string, email: string, password: string) => Promise<SignupResult>;
   syncRcaIdentity: () => Promise<{ success: boolean; identity: RcaIdentity | null }>;
+  initializeDefaultQuote: (
+    identity: RcaIdentity
+  ) => Promise<{ success: boolean; salesTransactionId: string | null }>;
   retryRcaSync: () => Promise<boolean>;
   setDecisionSession: (session: DecisionSession) => void;
   clearDecisionSession: () => void;

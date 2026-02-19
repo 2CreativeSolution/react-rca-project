@@ -16,7 +16,17 @@ export type DecisionResponse = {
   quoteId: string | null;
   quoteStatus: string | null;
   lastSelectedCatalogId: string | null;
+  salesTransactionId: string | null;
   hasAnyActive: boolean;
+};
+
+export type CreateDefaultQuotePayload = {
+  accountId: string;
+  contactId: string;
+};
+
+export type CreateDefaultQuoteResponse = {
+  salesTransactionId: string;
 };
 
 export type ProductSummary = {
@@ -128,6 +138,7 @@ function normalizeDecisionResponse(raw: unknown): DecisionResponse {
   const quoteId = findStringField(candidates, "quoteId");
   const quoteStatus = findStringField(candidates, "quoteStatus");
   const lastSelectedCatalogId = findStringField(candidates, "lastSelectedCatalogId");
+  const salesTransactionId = findStringField(candidates, "salesTransactionId");
 
   return {
     isActiveQuote,
@@ -136,7 +147,22 @@ function normalizeDecisionResponse(raw: unknown): DecisionResponse {
     quoteId,
     quoteStatus,
     lastSelectedCatalogId,
+    salesTransactionId,
     hasAnyActive: isActiveQuote || isActiveOrder || isActiveAsset,
+  };
+}
+
+function normalizeCreateDefaultQuoteResponse(raw: unknown): CreateDefaultQuoteResponse {
+  const candidates = collectCandidateRecords(raw);
+  const isSuccess = findBooleanField(candidates, "isSuccess");
+  const salesTransactionId = findStringField(candidates, "salesTransactionId");
+
+  if (isSuccess !== true || !salesTransactionId) {
+    throw new Error("Create default quote response is missing success or salesTransactionId.");
+  }
+
+  return {
+    salesTransactionId,
   };
 }
 
@@ -251,6 +277,16 @@ export async function evaluateDecision(): Promise<DecisionResponse> {
     { uId: currentUid }
   );
   return normalizeDecisionResponse(response);
+}
+
+export async function createDefaultQuote(
+  payload: CreateDefaultQuotePayload
+): Promise<CreateDefaultQuoteResponse> {
+  const response = await callIntegration<unknown, CreateDefaultQuotePayload>(
+    INTEGRATION_ROUTES.createDefaultQuote,
+    payload
+  );
+  return normalizeCreateDefaultQuoteResponse(response);
 }
 
 export async function listProducts(

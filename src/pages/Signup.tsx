@@ -14,7 +14,7 @@ function isEmailValid(email: string) {
 
 export default function Signup() {
   const signupCopy = AUTH_COPY.signup;
-  const { isAuthReady, isLoggedIn, signupWithCredentials, syncRcaIdentity } = useAuth();
+  const { initializeDefaultQuote, isAuthReady, isLoggedIn, signupWithCredentials, syncRcaIdentity } = useAuth();
   const { notifyError, notifyWarning } = useNotification();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -62,6 +62,14 @@ export default function Signup() {
       const syncResult = await syncRcaIdentity();
       if (!syncResult.success) {
         notifyWarning(signupCopy.syncWarningMessage);
+        return;
+      }
+
+      if (syncResult.identity) {
+        const defaultQuoteResult = await initializeDefaultQuote(syncResult.identity);
+        if (!defaultQuoteResult.success) {
+          notifyWarning(signupCopy.defaultQuoteWarningMessage);
+        }
       }
     } catch (error) {
       notifyError(error instanceof Error ? error.message : signupCopy.fallbackErrorMessage);

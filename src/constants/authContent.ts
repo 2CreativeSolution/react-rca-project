@@ -26,6 +26,7 @@ export const AUTH_COPY = {
     fallbackErrorMessage: "Unable to create account.",
     profileWarningMessage: "Account created, but your profile details are still updating.",
     syncWarningMessage: "Account created, but profile sync is still pending.",
+    defaultQuoteWarningMessage: "Account created, but default quote setup is still pending.",
     validation: {
       fullNameRequired: "Full name is required.",
       invalidEmail: "Enter a valid email address.",

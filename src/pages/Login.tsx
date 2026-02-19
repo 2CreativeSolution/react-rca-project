@@ -69,7 +69,7 @@ export default function Login() {
       try {
         const decision = await evaluateDecision();
         setDecisionSession(decision);
-        const hasActiveOrderAndAsset = decision.isActiveOrder && decision.isActiveAsset;
+        const hasActiveOrderAndAsset = decision.isActiveOrder || decision.isActiveAsset;
         navigate(hasActiveOrderAndAsset ? ROUTES.dashboard : ROUTES.catalog, { replace: true });
       } catch {
         clearDecisionSession();

@@ -74,10 +74,10 @@ export default function ProductLanding() {
       return;
     }
 
-    if (selectedCatalogParam !== selectedCatalogId) {
-      setSelectedCatalogId(selectedCatalogParam);
-    }
-  }, [catalogOptions, selectedCatalogId, selectedCatalogParam]);
+    setSelectedCatalogId((currentCatalogId) =>
+      currentCatalogId === selectedCatalogParam ? currentCatalogId : selectedCatalogParam
+    );
+  }, [catalogOptions, selectedCatalogParam]);
 
   useEffect(() => {
     const hasValidCatalogParam =

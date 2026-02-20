@@ -20,8 +20,11 @@ import { ROUTES } from "../constants/routes";
 import { useNotification } from "../context/useNotification";
 import {
   createOrdersFromQuote,
+  type CheckoutBillingDetails,
   type CartLineItem,
   type CartTotals,
+  type CreateOrderFromQuoteFuturePayload,
+  type CreateOrderFromQuotePayload,
   type TotalsComputationMeta,
 } from "../services/salesforceApi";
 import { formatCurrency } from "../components/cart/formatters";
@@ -33,17 +36,7 @@ type CheckoutRouteState = {
   totalsComputation: TotalsComputationMeta;
 };
 
-type BillingFormState = {
-  fullName: string;
-  email: string;
-  phone: string;
-  addressLine1: string;
-  addressLine2: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
-};
+type BillingFormState = CheckoutBillingDetails;
 
 const INITIAL_BILLING_FORM_STATE: BillingFormState = {
   fullName: "",
@@ -61,6 +54,13 @@ function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
+function toCreateOrderFromQuotePayload(payload: CreateOrderFromQuoteFuturePayload): CreateOrderFromQuotePayload {
+  // BE currently accepts only quoteId; keep mapper so full payload can be sent once contract expands.
+  return {
+    quoteId: payload.quoteId,
+  };
+}
+
 export default function Checkout() {
   const checkoutCopy = PRODUCT_COPY.checkout;
   const { notifyError, notifySuccess, notifyWarning } = useNotification();
@@ -71,6 +71,19 @@ export default function Checkout() {
 
   const state = location.state as CheckoutRouteState | null;
   const hasCheckoutState = Boolean(state?.quoteId && state?.lineItems && state?.totals && state?.totalsComputation);
+  const orderPayload = useMemo<CreateOrderFromQuoteFuturePayload | null>(() => {
+    if (!state) {
+      return null;
+    }
+
+    return {
+      quoteId: state.quoteId,
+      billing: billingForm,
+      lineItems: state.lineItems,
+      totals: state.totals,
+      totalsComputation: state.totalsComputation,
+    };
+  }, [billingForm, state]);
 
   const formErrorMessage = useMemo(() => {
     if (!billingForm.fullName.trim()) {
@@ -125,15 +138,10 @@ export default function Checkout() {
     }));
   };
 
-  const handlePlaceOrder = async (): Promise<void> => {
-    if (formErrorMessage) {
-      notifyWarning(formErrorMessage);
-      return;
-    }
-
+  const actualPlaceOrder = async (payload: CreateOrderFromQuoteFuturePayload): Promise<void> => {
     setIsSubmittingOrder(true);
     try {
-      const result = await createOrdersFromQuote({ quoteId: state.quoteId });
+      const result = await createOrdersFromQuote(toCreateOrderFromQuotePayload(payload));
       if (!result.isSuccess) {
         throw new Error(result.message ?? checkoutCopy.placeOrderErrorMessage);
       }
@@ -144,6 +152,20 @@ export default function Checkout() {
     } finally {
       setIsSubmittingOrder(false);
     }
+  };
+
+  const handlePlaceOrder = async (): Promise<void> => {
+    if (formErrorMessage) {
+      notifyWarning(formErrorMessage);
+      return;
+    }
+
+    if (!orderPayload) {
+      notifyWarning(checkoutCopy.missingCheckoutStateMessage);
+      return;
+    }
+
+    await actualPlaceOrder(orderPayload);
   };
 
   return (

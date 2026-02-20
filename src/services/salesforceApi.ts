@@ -114,6 +114,18 @@ export type CreateOrderFromQuotePayload = {
   quoteId: string;
 };
 
+export type CheckoutBillingDetails = {
+  fullName: string;
+  email: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+};
+
 export type CartLineItem = {
   uiId: string;
   quoteLineItemId: string | null;
@@ -134,6 +146,14 @@ export type CartTotals = {
 
 export type TotalsComputationMeta = {
   isFallbackComputed: boolean;
+};
+
+export type CreateOrderFromQuoteFuturePayload = {
+  quoteId: string;
+  billing: CheckoutBillingDetails;
+  lineItems: CartLineItem[];
+  totals: CartTotals;
+  totalsComputation: TotalsComputationMeta;
 };
 
 export type CartQuote = {

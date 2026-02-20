@@ -1,6 +1,7 @@
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import {
+  Box,
   Button,
   Paper,
   Stack,
@@ -57,10 +58,10 @@ export default function CartLineList({
           <TableHead>
             <TableRow>
               <TableCell>{labels.productLabel}</TableCell>
-              <TableCell align="right">{labels.quantityLabel}</TableCell>
-              <TableCell align="right">{labels.unitPriceLabel}</TableCell>
-              <TableCell align="right">{labels.lineTotalLabel}</TableCell>
-              <TableCell align="right">{labels.actionsLabel}</TableCell>
+              <TableCell align="center">{labels.quantityLabel}</TableCell>
+              <TableCell align="center">{labels.unitPriceLabel}</TableCell>
+              <TableCell align="center">{labels.lineTotalLabel}</TableCell>
+              <TableCell align="center">{labels.actionsLabel}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -79,34 +80,27 @@ export default function CartLineList({
                       {line.productName}
                     </Typography>
                   </TableCell>
-                  <TableCell align="right">
-                    <TextField
-                      type="number"
-                      size="small"
-                      value={draft.quantity}
-                      inputProps={{ min: 1, step: 1 }}
-                      disabled={!isMutable}
-                      onChange={(event) => onDraftChange(line.uiId, { quantity: event.target.value })}
-                      sx={{ width: 80 }}
-                    />
+                  <TableCell align="center">
+                    <Box sx={{ display: "flex", justifyContent: "center" }}>
+                      <TextField
+                        type="number"
+                        size="small"
+                        value={draft.quantity}
+                        inputProps={{ min: 1, step: 1 }}
+                        disabled={!isMutable}
+                        onChange={(event) => onDraftChange(line.uiId, { quantity: event.target.value })}
+                        sx={{ width: 80 }}
+                      />
+                    </Box>
                   </TableCell>
-                  <TableCell align="right">
+                  <TableCell align="center">
                     <Typography variant="body2">
                       {formatCurrency(line.unitPrice, currencyCode)}
                     </Typography>
                   </TableCell>
-                  <TableCell align="right">{formatCurrency(displayedLineTotal, currencyCode)}</TableCell>
-                  <TableCell align="right">
-                    <Stack direction="row" spacing={1} justifyContent="flex-end">
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<SaveOutlinedIcon fontSize="small" />}
-                        disabled={isPending || !isMutable}
-                        onClick={() => onSave(line)}
-                      >
-                        {labels.saveLabel}
-                      </Button>
+                  <TableCell align="center">{formatCurrency(displayedLineTotal, currencyCode)}</TableCell>
+                  <TableCell align="center">
+                    <Stack direction="row" spacing={1} justifyContent="center">
                       <Button
                         size="small"
                         color="error"
@@ -116,6 +110,15 @@ export default function CartLineList({
                         onClick={() => onRemove(line)}
                       >
                         {labels.removeLabel}
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        startIcon={<SaveOutlinedIcon fontSize="small" />}
+                        disabled={isPending || !isMutable}
+                        onClick={() => onSave(line)}
+                      >
+                        {labels.saveLabel}
                       </Button>
                     </Stack>
                   </TableCell>

@@ -30,6 +30,7 @@ export const PRODUCT_COPY = {
     addToCartErrorMessage: "Unable to add product to cart.",
     availabilityLabel: "Availability",
     notAvailableLabel: "Not available",
+    priceLabel: "Price",
     activeLabel: "Active",
     inactiveLabel: "Inactive",
     detailsTitleFallback: "Product details",

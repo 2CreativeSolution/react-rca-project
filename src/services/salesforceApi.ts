@@ -38,6 +38,7 @@ export type ProductSummary = {
   id?: string;
   name: string;
   description?: string;
+  imageUrl?: string;
   productCode?: string;
   isActive?: boolean;
   availabilityDate?: string;
@@ -288,6 +289,7 @@ function toProductSummary(value: unknown): ProductSummary | null {
   }
 
   const id = asNonEmptyString(value.id) ?? undefined;
+  const imageUrl = asNonEmptyString(value.imageUrl) ?? undefined;
   const productCode = asNonEmptyString(value.productCode) ?? undefined;
   const isActive = typeof value.isActive === "boolean" ? value.isActive : undefined;
   const availabilityDate = asNonEmptyString(value.availabilityDate) ?? undefined;
@@ -348,6 +350,7 @@ function toProductSummary(value: unknown): ProductSummary | null {
     id,
     name,
     description: asNonEmptyString(value.description) ?? undefined,
+    imageUrl,
     productCode,
     isActive,
     availabilityDate,

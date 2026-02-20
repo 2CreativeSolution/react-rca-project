@@ -1,5 +1,6 @@
 import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 import { CircularProgress, FormControl, InputLabel, MenuItem, Paper, Select, Stack, Typography } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import FilterToolbar from "../components/filters/FilterToolbar";
 import { useSearchParams } from "react-router-dom";
@@ -403,7 +404,43 @@ export default function ProductLanding() {
 
   return (
     <Stack spacing={2.5} sx={{ py: 1 }}>
-      <Typography variant="h4">{productLandingCopy.title}</Typography>
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        spacing={1.5}
+        sx={{ flexWrap: "wrap" }}
+      >
+        <Typography variant="h4">{productLandingCopy.title}</Typography>
+        <Stack
+          direction="row"
+          alignItems="center"
+          spacing={0.8}
+          sx={(theme) => ({
+            px: 1.6,
+            py: 0.85,
+            borderRadius: 2,
+            border: "1px solid",
+            borderColor: alpha(theme.palette.primary.main, 0.34),
+            backgroundColor: alpha(theme.palette.primary.light, 0.12),
+            boxShadow: `0 2px 10px ${alpha(theme.palette.primary.dark, 0.08)}`,
+          })}
+        >
+          <Typography color="text.secondary" variant="body2" sx={{ fontWeight: 600 }}>
+            {productLandingCopy.resultCountLabel}
+          </Typography>
+          <Typography
+            variant="h6"
+            sx={(theme) => ({
+              fontWeight: 800,
+              lineHeight: 1,
+              color: theme.palette.primary.dark,
+            })}
+          >
+            {filteredProducts.length}
+          </Typography>
+        </Stack>
+      </Stack>
       <Paper variant="outlined" sx={{ borderRadius: 2, p: 2.5 }}>
         <FormControl fullWidth>
           <InputLabel id="products-catalog-select-label">{productLandingCopy.catalogSelectLabel}</InputLabel>
@@ -454,10 +491,6 @@ export default function ProductLanding() {
               options: categoryFilterOptions,
               value: selectedCategory,
             }}
-            resultCount={{
-              label: productLandingCopy.resultCountLabel,
-              value: filteredProducts.length,
-            }}
           />
         </Stack>
       </Paper>
@@ -472,13 +505,11 @@ export default function ProductLanding() {
         labels={{
           addToCartCtaLabel: productLandingCopy.addToCartCtaLabel,
           addingToCartCtaLabel: productLandingCopy.addingToCartCtaLabel,
-          availabilityLabel: productLandingCopy.availabilityLabel,
           emptyCatalogMessage: productLandingCopy.emptyCatalogMessage,
           emptyMessage: hasActiveProductFilters ? productLandingCopy.emptyFilteredMessage : productLandingCopy.emptyMessage,
           loadingMessage: productLandingCopy.loadingMessage,
           notAvailableLabel: productLandingCopy.notAvailableLabel,
-          productCodeLabel: productLandingCopy.productCodeLabel,
-          productIdLabel: productLandingCopy.productIdLabel,
+          priceLabel: productLandingCopy.priceLabel,
         }}
         onAddToCart={handleAddToCart}
         onSelectProduct={setSelectedProduct}

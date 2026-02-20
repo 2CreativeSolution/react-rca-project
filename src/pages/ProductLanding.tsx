@@ -13,12 +13,6 @@ import { getCatalogOptions, type CatalogOption } from "../services/catalog/catal
 import { addProductsToCart, listProducts, type ProductSummary } from "../services/salesforceApi";
 
 const UNCATEGORIZED_FILTER_VALUE = "__filter_uncategorized__";
-// TEMPORARY (accepted test-only risk): Backend add-to-cart payload sometimes omits
-// pricebook/unit price for products. Keep these test fallbacks until the API
-// consistently returns pricebookEntryId + unitPrice.
-// TODO: Remove these constants and hard-fail when backend pricing metadata is complete.
-const TEST_FALLBACK_PRICEBOOK_ENTRY_ID = "01uau000001aFBFAA2";
-const TEST_FALLBACK_UNIT_PRICE = 200;
 
 export default function ProductLanding() {
   const productLandingCopy = PRODUCT_COPY.landing;
@@ -307,8 +301,11 @@ export default function ProductLanding() {
         ?? product.productSellingModelOptions[0];
       const selectedModel = selectedOption?.model;
       const productId = product.id;
-      const pricebookEntryId = selectedOption?.pricebookEntryId ?? TEST_FALLBACK_PRICEBOOK_ENTRY_ID;
-      const unitPrice = selectedOption?.unitPrice ?? TEST_FALLBACK_UNIT_PRICE;
+      const matchedEntry = product.pricebookEntries.find(
+        (entry) => entry.productSellingModelId && entry.productSellingModelId === selectedModel?.id
+      );
+      const pricebookEntryId = selectedOption?.pricebookEntryId ?? matchedEntry?.id;
+      const unitPrice = selectedOption?.unitPrice ?? matchedEntry?.unitPrice;
 
       if (!productId || !pricebookEntryId || typeof unitPrice !== "number") {
         notifyWarning(productLandingCopy.addToCartPreconditionWarningMessage);

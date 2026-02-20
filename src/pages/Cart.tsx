@@ -173,11 +173,19 @@ export default function Cart() {
         return;
       }
 
+      // TODO(BE dependency): removeProductsToCart requires Product2Id in payload.
+      // Keep this guard until cart API reliably returns Product2Id for each line item.
+      if (!line.productId) {
+        notifyError(cartCopy.loadErrorMessage);
+        return;
+      }
+
       setLinePendingId(line.uiId);
       try {
         const result = await removeProductsToCart({
           quoteID: quoteId,
           quoteLineItemID: line.quoteLineItemId,
+          productsToAddList: [{ Product2Id: line.productId }],
         });
 
         if (!result.isSuccess) {

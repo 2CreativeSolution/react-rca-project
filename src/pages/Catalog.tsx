@@ -1,12 +1,13 @@
 import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 import { Alert, Button, Grid, Paper, Skeleton, Stack, Typography } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import CatalogCard from "../components/catalog/CatalogCard";
-import CatalogDetailsDrawer from "../components/catalog/CatalogDetailsDrawer";
 import CatalogStats from "../components/catalog/CatalogStats";
 import CatalogToolbar from "../components/catalog/CatalogToolbar";
 import { catalogGlassSurfaceSx } from "../components/catalog/styles";
 import { PRODUCT_COPY } from "../constants/productContent";
+import { ROUTES } from "../constants/routes";
 import { useNotification } from "../context/useNotification";
 import { fetchCatalogs } from "../services/catalog/catalogService";
 import type { CatalogItem, CatalogSortBy } from "../services/catalog/types";
@@ -32,13 +33,11 @@ function bySortOption(items: CatalogItem[], sortBy: CatalogSortBy) {
 
 export default function Catalog() {
   const catalogCopy = PRODUCT_COPY.catalog;
-  const { notifyError, notifySuccess } = useNotification();
+  const { notifyError } = useNotification();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [correlationId, setCorrelationId] = useState("");
-  const [selectedCatalog, setSelectedCatalog] = useState<CatalogItem | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState("all");
   const [sortBy, setSortBy] = useState<CatalogSortBy>("nameAsc");
@@ -55,11 +54,9 @@ export default function Catalog() {
       const data = await fetchCatalogs();
       setItems(data.items);
       setTotalCount(data.count);
-      setCorrelationId(data.correlationId);
     } catch (error) {
       setItems([]);
       setTotalCount(0);
-      setCorrelationId("");
       setHasLoadError(true);
       const message = error instanceof Error ? error.message : catalogCopy.fallbackErrorMessage;
       notifyError(message);
@@ -122,33 +119,18 @@ export default function Catalog() {
     };
   }, [items, totalCount]);
 
-  const handleOpenDetails = (item: CatalogItem) => {
-    setSelectedCatalog(item);
-    setIsDrawerOpen(true);
-  };
-
-  const handleCloseDetails = () => {
-    setIsDrawerOpen(false);
-    setSelectedCatalog(null);
+  const handleViewProducts = (item: CatalogItem) => {
+    const searchParams = new URLSearchParams({ catalogId: item.id });
+    navigate({
+      pathname: ROUTES.products,
+      search: `?${searchParams.toString()}`,
+    });
   };
 
   const handleClearFilters = () => {
     setSearchTerm("");
     setSelectedType("all");
     setSortBy("nameAsc");
-  };
-
-  const handleCopyCorrelationId = async () => {
-    if (!correlationId) {
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(correlationId);
-      notifySuccess(catalogCopy.copiedCorrelationIdMessage);
-    } catch {
-      notifyError(catalogCopy.copyCorrelationIdErrorMessage);
-    }
   };
 
   const isFilteredResult = searchTerm.trim().length > 0 || selectedType !== "all";
@@ -359,9 +341,9 @@ export default function Catalog() {
             <Grid key={item.id} size={{ xs: 12, sm: 6, lg: 4 }}>
               <CatalogCard
                 item={item}
-                onOpenDetails={handleOpenDetails}
+                onViewProducts={handleViewProducts}
                 labels={{
-                  detailsCtaLabel: catalogCopy.detailsCtaLabel,
+                  viewProductsCtaLabel: catalogCopy.viewProductsCtaLabel,
                   categoriesLabel: catalogCopy.categoriesLabel,
                   codeLabel: catalogCopy.codeLabel,
                   startDateLabel: catalogCopy.startDateLabel,
@@ -372,32 +354,6 @@ export default function Catalog() {
           ))}
         </Grid>
       ) : null}
-
-      <CatalogDetailsDrawer
-        open={isDrawerOpen}
-        item={selectedCatalog}
-        correlationId={correlationId}
-        onClose={handleCloseDetails}
-        onCopyCorrelationId={() => void handleCopyCorrelationId()}
-        labels={{
-          drawerTitleFallback: catalogCopy.drawerTitleFallback,
-          metadataLabel: catalogCopy.metadataLabel,
-          overviewSectionLabel: catalogCopy.overviewSectionLabel,
-          datesSectionLabel: catalogCopy.datesSectionLabel,
-          metadataSectionLabel: catalogCopy.metadataSectionLabel,
-          idLabel: catalogCopy.idLabel,
-          typeLabel: catalogCopy.typeLabel,
-          categoriesLabel: catalogCopy.categoriesLabel,
-          codeLabel: catalogCopy.codeLabel,
-          descriptionLabel: catalogCopy.descriptionLabel,
-          startDateLabel: catalogCopy.startDateLabel,
-          endDateLabel: catalogCopy.endDateLabel,
-          noDataFallbackLabel: catalogCopy.noDataFallbackLabel,
-          closeDrawerAriaLabel: catalogCopy.closeDrawerAriaLabel,
-          copyCorrelationIdLabel: catalogCopy.copyCorrelationIdLabel,
-          correlationIdLabel: catalogCopy.correlationIdLabel,
-        }}
-      />
     </Stack>
   );
 }

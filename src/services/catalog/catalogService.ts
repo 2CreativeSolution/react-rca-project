@@ -86,16 +86,9 @@ function normalizeCatalogResponse(raw: unknown): CatalogPageData {
     .filter((catalog): catalog is CatalogItem => Boolean(catalog));
 
   const count = asNumber(result.count) ?? items.length;
-  const correlationId = asString(result.correlationId) ?? "";
-  const statusMessage = isRecord(result.status)
-    ? asString(result.status.message) ?? "Catalogs loaded successfully."
-    : "Catalogs loaded successfully.";
-
   return {
     items,
     count,
-    correlationId,
-    statusMessage,
   };
 }
 

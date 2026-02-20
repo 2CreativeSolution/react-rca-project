@@ -4,6 +4,11 @@ import { INTEGRATION_ROUTES } from "../constants/integrationRoutes";
 
 type UnknownRecord = Record<string, unknown>;
 
+type CartLineItemDraft = {
+  Quantity?: string;
+  UnitPrice?: string;
+};
+
 export type SyncUserResponse = {
   accountId: string;
   contactId: string;
@@ -43,6 +48,8 @@ export type ProductSummary = {
 export type ProductSellingModelOptionSummary = {
   id?: string;
   productId?: string;
+  pricebookEntryId?: string;
+  unitPrice?: number;
   isDefault: boolean;
   model: {
     id?: string;
@@ -60,6 +67,72 @@ export type ListProductsPayload = {
   searchProductName: string;
 };
 
+export type AddProductInput = {
+  Product2Id: string;
+  PricebookEntryId: string;
+  UnitPrice: string;
+  Quantity: string;
+  PeriodBoundary?: string;
+  BillingFrequency?: string;
+};
+
+export type AddProductsToCartPayload = {
+  quoteID: string;
+  productsToAddList: AddProductInput[];
+};
+
+export type EditProductInput = CartLineItemDraft;
+
+export type EditProductsToCartPayload = {
+  quoteID: string;
+  quoteLineItemID: string;
+  productsToAddList: EditProductInput[];
+};
+
+export type RemoveProductsFromCartPayload = {
+  quoteID: string;
+  quoteLineItemID: string;
+};
+
+export type CreateOrderFromQuotePayload = {
+  quoteId: string;
+};
+
+export type CartLineItem = {
+  uiId: string;
+  quoteLineItemId: string | null;
+  productId: string | null;
+  productName: string;
+  quantity: number | null;
+  unitPrice: number | null;
+  lineTotal: number | null;
+  billingFrequency: string | null;
+  periodBoundary: string | null;
+};
+
+export type CartTotals = {
+  itemCount: number;
+  totalAmount: number | null;
+  currencyCode: string;
+};
+
+export type TotalsComputationMeta = {
+  isFallbackComputed: boolean;
+};
+
+export type CartQuote = {
+  quoteId: string;
+  quoteStatus: string | null;
+  lineItems: CartLineItem[];
+  totals: CartTotals;
+  totalsComputation: TotalsComputationMeta;
+};
+
+export type CartMutationResult = {
+  isSuccess: boolean;
+  message: string | null;
+};
+
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === "object" && value !== null;
 }
@@ -70,6 +143,19 @@ function asNonEmptyString(value: unknown): string | null {
 
 function asNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function asNumberLike(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
 }
 
 function collectCandidateRecords(raw: unknown): UnknownRecord[] {
@@ -105,6 +191,16 @@ function findBooleanField(candidates: UnknownRecord[], key: string): boolean | n
   for (const candidate of candidates) {
     if (typeof candidate[key] === "boolean") {
       return candidate[key] as boolean;
+    }
+  }
+  return null;
+}
+
+function findNumberField(candidates: UnknownRecord[], key: string): number | null {
+  for (const candidate of candidates) {
+    const value = asNumberLike(candidate[key]);
+    if (value !== null) {
+      return value;
     }
   }
   return null;
@@ -176,8 +272,8 @@ function toProductSummary(value: unknown): ProductSummary | null {
     return null;
   }
 
-  const id = asNonEmptyString(value.id) ?? undefined;
-  const productCode = asNonEmptyString(value.productCode) ?? undefined;
+  const id = asNonEmptyString(value.id) ?? asNonEmptyString(value.Id) ?? undefined;
+  const productCode = asNonEmptyString(value.productCode) ?? asNonEmptyString(value.ProductCode) ?? undefined;
   const isActive = typeof value.isActive === "boolean" ? value.isActive : undefined;
   const availabilityDate = asNonEmptyString(value.availabilityDate) ?? undefined;
   const productSpecificationTypeName = isRecord(value.productSpecificationType)
@@ -196,17 +292,31 @@ function toProductSummary(value: unknown): ProductSummary | null {
           }
 
           const model = isRecord(option.productSellingModel) ? option.productSellingModel : {};
+          const nestedPricebookEntry = isRecord(option.pricebookEntry) ? option.pricebookEntry : {};
           return {
-            id: asNonEmptyString(option.id) ?? undefined,
-            productId: asNonEmptyString(option.productId) ?? undefined,
+            id: asNonEmptyString(option.id) ?? asNonEmptyString(option.Id) ?? undefined,
+            productId: asNonEmptyString(option.productId) ?? asNonEmptyString(option.Product2Id) ?? undefined,
+            pricebookEntryId:
+              asNonEmptyString(option.pricebookEntryId) ??
+              asNonEmptyString(option.PricebookEntryId) ??
+              asNonEmptyString(nestedPricebookEntry.id) ??
+              asNonEmptyString(nestedPricebookEntry.Id) ??
+              undefined,
+            unitPrice:
+              asNumberLike(option.unitPrice) ??
+              asNumberLike(option.UnitPrice) ??
+              asNumberLike(nestedPricebookEntry.unitPrice) ??
+              asNumberLike(nestedPricebookEntry.UnitPrice) ??
+              undefined,
             isDefault: option.isDefault === true,
             model: {
-              id: asNonEmptyString(model.id) ?? undefined,
-              name: asNonEmptyString(model.name) ?? undefined,
-              status: asNonEmptyString(model.status) ?? undefined,
-              sellingModelType: asNonEmptyString(model.sellingModelType) ?? undefined,
-              pricingTermUnit: asNonEmptyString(model.pricingTermUnit) ?? undefined,
-              pricingTerm: asNumber(model.pricingTerm) ?? undefined,
+              id: asNonEmptyString(model.id) ?? asNonEmptyString(model.Id) ?? undefined,
+              name: asNonEmptyString(model.name) ?? asNonEmptyString(model.Name) ?? undefined,
+              status: asNonEmptyString(model.status) ?? asNonEmptyString(model.Status) ?? undefined,
+              sellingModelType:
+                asNonEmptyString(model.sellingModelType) ?? asNonEmptyString(model.SellingModelType) ?? undefined,
+              pricingTermUnit: asNonEmptyString(model.pricingTermUnit) ?? asNonEmptyString(model.PricingTermUnit) ?? undefined,
+              pricingTerm: asNumber(model.pricingTerm) ?? asNumber(model.PricingTerm) ?? undefined,
               doesAutoRenewByDefault:
                 typeof model.doesAutoRenewByDefault === "boolean" ? model.doesAutoRenewByDefault : undefined,
             },
@@ -245,6 +355,225 @@ function normalizeListProductsResponse(raw: unknown): ProductSummary[] {
   }
 
   throw new Error("List products response is missing a valid products array.");
+}
+
+function extractLineItems(candidates: UnknownRecord[]): unknown[] {
+  const possibleKeys = ["quoteLines", "quoteLineItems", "quoteLineList", "lineItems", "items", "records"];
+
+  for (const candidate of candidates) {
+    for (const key of possibleKeys) {
+      if (Array.isArray(candidate[key])) {
+        return candidate[key] as unknown[];
+      }
+    }
+
+    const quote = isRecord(candidate.quote) ? candidate.quote : null;
+    if (quote) {
+      for (const key of possibleKeys) {
+        if (Array.isArray(quote[key])) {
+          return quote[key] as unknown[];
+        }
+      }
+    }
+  }
+
+  return [];
+}
+
+function collectNestedRecords(value: unknown, maxDepth = 5): UnknownRecord[] {
+  const records: UnknownRecord[] = [];
+
+  function visit(node: unknown, depth: number): void {
+    if (depth > maxDepth) {
+      return;
+    }
+
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        visit(item, depth + 1);
+      }
+      return;
+    }
+
+    if (!isRecord(node)) {
+      return;
+    }
+
+    records.push(node);
+    for (const nestedValue of Object.values(node)) {
+      visit(nestedValue, depth + 1);
+    }
+  }
+
+  visit(value, 0);
+  return records;
+}
+
+function findLikelyLineItems(raw: unknown): unknown[] {
+  const nestedRecords = collectNestedRecords(raw);
+  const candidateArrays: unknown[][] = [];
+
+  for (const record of nestedRecords) {
+    for (const [key, value] of Object.entries(record)) {
+      if (!Array.isArray(value) || value.length === 0) {
+        continue;
+      }
+
+      const normalizedKey = key.toLowerCase();
+      if (
+        normalizedKey.includes("quoteline")
+        || normalizedKey.includes("lineitem")
+        || normalizedKey === "items"
+        || normalizedKey === "records"
+      ) {
+        candidateArrays.push(value);
+      }
+    }
+  }
+
+  if (candidateArrays.length > 0) {
+    candidateArrays.sort((a, b) => b.length - a.length);
+    return candidateArrays[0];
+  }
+
+  return [];
+}
+
+function readFromRecord(record: UnknownRecord, keys: string[]): unknown {
+  for (const key of keys) {
+    if (key in record) {
+      return record[key];
+    }
+  }
+
+  return undefined;
+}
+
+function toCartLineItem(value: unknown, index: number): CartLineItem | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const quoteLineItemId = asNonEmptyString(
+    readFromRecord(value, [
+      "quoteLineItemID",
+      "quoteLineItemId",
+      "quoteLineId",
+      "quoteLineID",
+      "QuoteLineId",
+      "QuoteLineID",
+      "id",
+      "Id",
+    ])
+  ) ?? asNonEmptyString(readFromRecord(value, ["QuoteLineItemId", "QuoteLineItemID"]));
+
+  const productRecord =
+    (isRecord(value.product) ? value.product : null) ||
+    (isRecord(value.product2) ? value.product2 : null) ||
+    (isRecord(value.Product2) ? value.Product2 : null);
+
+  const productId =
+    asNonEmptyString(readFromRecord(value, ["productId", "Product2Id"])) ||
+    (productRecord ? asNonEmptyString(readFromRecord(productRecord, ["id", "Id"])) : null);
+
+  const productName =
+    asNonEmptyString(readFromRecord(value, ["productName", "Name", "name"])) ||
+    (productRecord
+      ? asNonEmptyString(readFromRecord(productRecord, ["name", "Name"]))
+      : null) ||
+    "Unnamed product";
+
+  const quantity = asNumberLike(readFromRecord(value, ["quantity", "Quantity"]));
+  const unitPrice = asNumberLike(readFromRecord(value, ["unitPrice", "UnitPrice"]));
+  const lineTotal = asNumberLike(readFromRecord(value, ["lineTotal", "totalPrice", "TotalPrice", "netAmount"]));
+
+  // Keep UI identity separate from backend mutation identity so rows without server ids remain renderable.
+  const uiId =
+    quoteLineItemId ??
+    `${productId ?? "line"}-${productName}-${index}`.toLowerCase().replace(/\s+/g, "-");
+
+  return {
+    uiId,
+    quoteLineItemId,
+    productId,
+    productName,
+    quantity,
+    unitPrice,
+    lineTotal,
+    billingFrequency: asNonEmptyString(readFromRecord(value, ["billingFrequency", "BillingFrequency"])),
+    periodBoundary: asNonEmptyString(readFromRecord(value, ["periodBoundary", "PeriodBoundary"])),
+  };
+}
+
+function normalizeCartQuote(raw: unknown): CartQuote {
+  const candidates = collectCandidateRecords(raw);
+  const quoteId =
+    findStringField(candidates, "quoteId") ||
+    findStringField(candidates, "quoteID") ||
+    findStringField(candidates, "id") ||
+    findStringField(candidates, "quoteNumber");
+
+  const extractedLineItems = extractLineItems(candidates);
+  const lineItemSource = extractedLineItems.length > 0 ? extractedLineItems : findLikelyLineItems(raw);
+  const lineItems = lineItemSource
+    .map((item, index) => toCartLineItem(item, index))
+    .filter((item): item is CartLineItem => Boolean(item));
+
+  const rawTotal =
+    findNumberField(candidates, "totalAmount") ??
+    findNumberField(candidates, "grandTotal") ??
+    findNumberField(candidates, "quoteTotal") ??
+    findNumberField(candidates, "quoteSubTotal") ??
+    findNumberField(candidates, "totalPrice") ??
+    findNumberField(candidates, "netAmount");
+
+  const computedTotal = lineItems.reduce((sum, item) => {
+    if (item.quantity === null || item.unitPrice === null) {
+      return sum;
+    }
+
+    return sum + item.quantity * item.unitPrice;
+  }, 0);
+
+  const hasComputableTotal = lineItems.some((item) => item.quantity !== null && item.unitPrice !== null);
+  const totalAmount = rawTotal ?? (hasComputableTotal ? computedTotal : null);
+
+  const itemCount = lineItems.reduce((sum, item) => {
+    if (item.quantity !== null && item.quantity > 0) {
+      return sum + item.quantity;
+    }
+    return sum + 1;
+  }, 0);
+
+  return {
+    quoteId: quoteId ?? "",
+    quoteStatus: findStringField(candidates, "quoteStatus") || findStringField(candidates, "status"),
+    lineItems,
+    totals: {
+      itemCount,
+      totalAmount,
+      currencyCode: findStringField(candidates, "currencyCode") ?? "USD",
+    },
+    totalsComputation: {
+      isFallbackComputed: rawTotal === null,
+    },
+  };
+}
+
+function normalizeCartMutationResult(raw: unknown): CartMutationResult {
+  const candidates = collectCandidateRecords(raw);
+  // TEMPORARY (accepted risk): Some current integration responses omit `isSuccess`
+  // on successful HTTP 200 mutations, so we default to true for now.
+  const isSuccess = findBooleanField(candidates, "isSuccess") ?? true;
+  const message =
+    findStringField(candidates, "message") ||
+    findStringField(candidates, "statusMessage") ||
+    findStringField(candidates, "error");
+
+  return {
+    isSuccess,
+    message,
+  };
 }
 
 export async function callIntegration<T, P = unknown>(
@@ -297,4 +626,44 @@ export async function listProducts(
     payload
   );
   return normalizeListProductsResponse(response);
+}
+
+export async function getQuotesWithQuoteLines(payload: { quoteId: string }): Promise<CartQuote> {
+  const response = await callIntegration<unknown, { quoteId: string }>(
+    INTEGRATION_ROUTES.getQuotesWithQuoteLines,
+    payload
+  );
+  return normalizeCartQuote(response);
+}
+
+export async function addProductsToCart(payload: AddProductsToCartPayload): Promise<CartMutationResult> {
+  const response = await callIntegration<unknown, AddProductsToCartPayload>(
+    INTEGRATION_ROUTES.addProductsToCart,
+    payload
+  );
+  return normalizeCartMutationResult(response);
+}
+
+export async function editProductsToCart(payload: EditProductsToCartPayload): Promise<CartMutationResult> {
+  const response = await callIntegration<unknown, EditProductsToCartPayload>(
+    INTEGRATION_ROUTES.editProductsToCart,
+    payload
+  );
+  return normalizeCartMutationResult(response);
+}
+
+export async function removeProductsToCart(payload: RemoveProductsFromCartPayload): Promise<CartMutationResult> {
+  const response = await callIntegration<unknown, RemoveProductsFromCartPayload>(
+    INTEGRATION_ROUTES.removeProductsToCart,
+    payload
+  );
+  return normalizeCartMutationResult(response);
+}
+
+export async function createOrdersFromQuote(payload: CreateOrderFromQuotePayload): Promise<CartMutationResult> {
+  const response = await callIntegration<unknown, CreateOrderFromQuotePayload>(
+    INTEGRATION_ROUTES.createOrdersFromQuote,
+    payload
+  );
+  return normalizeCartMutationResult(response);
 }

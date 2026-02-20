@@ -33,6 +33,7 @@ export type AuthContextType = {
   isAuthReady: boolean;
   isLoggedIn: boolean;
   currentUser: User | null;
+  profilePhotoUrl: string | null;
   rcaIdentity: RcaIdentity | null;
   rcaSyncStatus: RcaSyncStatus;
   decisionSession: DecisionSession;
@@ -47,6 +48,8 @@ export type AuthContextType = {
   clearDecisionSession: () => void;
   setRcaIdentity: (identity: RcaIdentity) => void;
   clearRcaIdentity: () => void;
+  uploadProfilePhoto: (file: File) => Promise<{ photoURL: string }>;
+  removeProfilePhoto: () => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
   getAccessToken: () => Promise<string | null>;
   logout: () => Promise<void>;

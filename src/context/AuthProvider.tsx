@@ -9,6 +9,14 @@ import {
   type User,
 } from "firebase/auth";
 import { auth } from "../auth/firebaseClient";
+import { requestPasswordReset } from "../services/auth/passwordResetService";
+import {
+  ProfilePhotoValidationError,
+  deleteProfilePhotoFile,
+  hasStoredProfilePhotoPreference,
+  readProfilePhoto,
+  uploadProfilePhotoFile,
+} from "../services/auth/profilePhotoService";
 import {
   clearDecisionSession as clearDecisionSessionStorage,
   clearRcaIdentityStorage,
@@ -23,7 +31,6 @@ import {
 } from "../services/auth/rcaIdentityStorage";
 import { clearCatalogOptionsCache } from "../services/catalog/catalogService";
 import { createDefaultQuote, syncUser } from "../services/salesforceApi";
-import { requestPasswordReset } from "../services/auth/passwordResetService";
 import { AuthContext } from "./AuthContext";
 import type { DecisionSession, RcaIdentity, RcaSyncStatus, SignupResult } from "./authTypes";
 
@@ -35,9 +42,23 @@ async function resolveAccessToken(user: User | null): Promise<string | null> {
   return user.getIdToken();
 }
 
+function mapProfilePhotoError(error: unknown, fallbackMessage: string): Error {
+  if (error instanceof ProfilePhotoValidationError) {
+    return error;
+  }
+
+  if (error instanceof Error) {
+    return error;
+  }
+
+  return new Error(fallbackMessage);
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
+  const [hasProfilePhotoPreference, setHasProfilePhotoPreference] = useState(false);
   const [rcaIdentity, setRcaIdentityState] = useState<RcaIdentity | null>(() => readRcaIdentity());
   const [rcaSyncStatus, setRcaSyncStatus] = useState<RcaSyncStatus>(() => getDefaultRcaSyncStatus());
   const [decisionSession, setDecisionSessionState] = useState<DecisionSession>(() => getDefaultDecisionSession());
@@ -48,9 +69,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (nextUser?.uid) {
         setRcaSyncStatus(readRcaSyncStatus(nextUser.uid));
         setDecisionSessionState(readDecisionSession(nextUser.uid));
+        setProfilePhotoUrl(readProfilePhoto(nextUser.uid));
+        setHasProfilePhotoPreference(hasStoredProfilePhotoPreference(nextUser.uid));
       } else {
         setRcaSyncStatus(getDefaultRcaSyncStatus());
         setDecisionSessionState(getDefaultDecisionSession());
+        setProfilePhotoUrl(null);
+        setHasProfilePhotoPreference(false);
       }
       setIsAuthReady(true);
     });
@@ -203,12 +228,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearCatalogOptionsCache();
   };
 
+  const uploadProfilePhoto = async (file: File): Promise<{ photoURL: string }> => {
+    const user = auth.currentUser ?? currentUser;
+    if (!user?.uid) {
+      throw new Error("You must be signed in to upload a profile photo.");
+    }
+
+    try {
+      const result = await uploadProfilePhotoFile({ uid: user.uid, file });
+      setProfilePhotoUrl(result.photoURL);
+      setHasProfilePhotoPreference(true);
+      return result;
+    } catch (error) {
+      throw mapProfilePhotoError(error, "Unable to upload profile photo.");
+    }
+  };
+
+  const removeProfilePhoto = async (): Promise<void> => {
+    const user = auth.currentUser ?? currentUser;
+    if (!user?.uid) {
+      throw new Error("You must be signed in to remove a profile photo.");
+    }
+
+    try {
+      await deleteProfilePhotoFile(user.uid);
+      setProfilePhotoUrl(null);
+      setHasProfilePhotoPreference(true);
+    } catch (error) {
+      throw mapProfilePhotoError(error, "Unable to remove profile photo.");
+    }
+  };
+
   const logout = async () => {
     await signOut(auth);
     clearRcaIdentity();
   };
 
   const isLoggedIn = Boolean(currentUser);
+  const resolvedProfilePhotoUrl = hasProfilePhotoPreference ? profilePhotoUrl : currentUser?.photoURL?.trim() || null;
 
   return (
     <AuthContext.Provider
@@ -216,6 +273,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthReady,
         isLoggedIn,
         currentUser,
+        profilePhotoUrl: resolvedProfilePhotoUrl,
         rcaIdentity,
         rcaSyncStatus,
         decisionSession,
@@ -228,6 +286,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clearDecisionSession,
         setRcaIdentity,
         clearRcaIdentity,
+        uploadProfilePhoto,
+        removeProfilePhoto,
         requestPasswordReset,
         getAccessToken,
         logout,

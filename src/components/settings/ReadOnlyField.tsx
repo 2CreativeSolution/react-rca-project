@@ -10,13 +10,13 @@ export function ReadOnlyField({ label, value }: ReadOnlyFieldProps) {
     <Stack
       spacing={0.45}
       sx={{
-        px: 1.5,
-        py: 1.25,
+        px: 1.75,
+        py: 1.5,
         borderRadius: 2,
         border: "1px solid",
         borderColor: "divider",
         bgcolor: "background.default",
-        minHeight: 72,
+        minHeight: 76,
         justifyContent: "center",
       }}
     >

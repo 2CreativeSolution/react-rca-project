@@ -28,6 +28,7 @@ export const PRODUCT_COPY = {
     addToCartCommitmentUnsupportedWarningMessage:
       "This commitment-based product needs additional backend configuration before it can be added from this UI.",
     addToCartErrorMessage: "Unable to add product to cart.",
+    bundleProductLabel: "Bundle",
     availabilityLabel: "Availability",
     notAvailableLabel: "Not available",
     priceLabel: "Price",

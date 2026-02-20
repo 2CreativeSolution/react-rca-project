@@ -505,6 +505,7 @@ export default function ProductLanding() {
         labels={{
           addToCartCtaLabel: productLandingCopy.addToCartCtaLabel,
           addingToCartCtaLabel: productLandingCopy.addingToCartCtaLabel,
+          bundleProductLabel: productLandingCopy.bundleProductLabel,
           emptyCatalogMessage: productLandingCopy.emptyCatalogMessage,
           emptyMessage: hasActiveProductFilters ? productLandingCopy.emptyFilteredMessage : productLandingCopy.emptyMessage,
           loadingMessage: productLandingCopy.loadingMessage,

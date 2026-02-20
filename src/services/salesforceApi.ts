@@ -37,6 +37,7 @@ export type CreateDefaultQuoteResponse = {
 export type ProductSummary = {
   id?: string;
   name: string;
+  nodeType?: string;
   description?: string;
   imageUrl?: string;
   productCode?: string;
@@ -369,6 +370,7 @@ function toProductSummary(value: unknown): ProductSummary | null {
   return {
     id,
     name,
+    nodeType: asNonEmptyString(value.nodeType) ?? undefined,
     description: asNonEmptyString(value.description) ?? undefined,
     imageUrl,
     productCode,

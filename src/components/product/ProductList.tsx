@@ -1,5 +1,6 @@
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import HelpOutlineRoundedIcon from "@mui/icons-material/HelpOutlineRounded";
+import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import ScheduleRoundedIcon from "@mui/icons-material/ScheduleRounded";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import { Box, Button, ButtonBase, CircularProgress, Paper, Stack, Typography } from "@mui/material";
@@ -11,6 +12,7 @@ import { formatProductPrice, resolveAvailabilityStatus, toProductInitials } from
 type ProductListLabels = {
   addToCartCtaLabel: string;
   addingToCartCtaLabel: string;
+  bundleProductLabel: string;
   emptyCatalogMessage: string;
   emptyMessage: string;
   loadingMessage: string;
@@ -107,6 +109,7 @@ export default function ProductList({
             const availabilityBadge = availabilityBadgeMap[availabilityStatus];
             const displayPrice = formatProductPrice(product, labels.notAvailableLabel);
             const productHasImage = Boolean(product.imageUrl && failedImageUrls[product.imageUrl] !== true);
+            const isBundleProduct = (product.nodeType ?? "").toLowerCase() === "bundleproduct";
 
             return (
             <Paper
@@ -162,6 +165,40 @@ export default function ProductList({
                       overflow: "hidden",
                     })}
                   >
+                    {isBundleProduct ? (
+                      <Box
+                        sx={(theme) => ({
+                          position: "absolute",
+                          top: 14,
+                          left: 14,
+                          zIndex: 1,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 0.5,
+                          px: 1,
+                          py: 0.45,
+                          borderRadius: 999,
+                          backgroundColor: alpha(theme.palette.info.dark, 0.88),
+                          color: theme.palette.common.white,
+                          border: "1px solid",
+                          borderColor: alpha(theme.palette.common.white, 0.34),
+                        })}
+                      >
+                        <Inventory2OutlinedIcon sx={{ fontSize: 14 }} />
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            pl: 0.25,
+                            fontWeight: 700,
+                            letterSpacing: "0.01em",
+                            lineHeight: 1,
+                          }}
+                        >
+                          {labels.bundleProductLabel}
+                        </Typography>
+                      </Box>
+                    ) : null}
+
                     {productHasImage ? (
                       <Box
                         component="img"

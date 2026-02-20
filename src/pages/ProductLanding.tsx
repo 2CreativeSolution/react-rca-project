@@ -2,17 +2,23 @@ import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 import { CircularProgress, FormControl, InputLabel, MenuItem, Paper, Select, Stack, Typography } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import FilterToolbar from "../components/filters/FilterToolbar";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import ProductDetailsDialog from "../components/product/ProductDetailsDialog";
 import ProductList from "../components/product/ProductList";
 import { catalogGlassSurfaceSx } from "../components/catalog/styles";
 import { PRODUCT_COPY } from "../constants/productContent";
-import { ROUTES } from "../constants/routes";
+import { useAuth } from "../context/useAuth";
 import { useNotification } from "../context/useNotification";
 import { getCatalogOptions, type CatalogOption } from "../services/catalog/catalogService";
-import { listProducts, type ProductSummary } from "../services/salesforceApi";
+import { addProductsToCart, listProducts, type ProductSummary } from "../services/salesforceApi";
 
 const UNCATEGORIZED_FILTER_VALUE = "__filter_uncategorized__";
+// TEMPORARY (accepted test-only risk): Backend add-to-cart payload sometimes omits
+// pricebook/unit price for products. Keep these test fallbacks until the API
+// consistently returns pricebookEntryId + unitPrice.
+// TODO: Remove these constants and hard-fail when backend pricing metadata is complete.
+const TEST_FALLBACK_PRICEBOOK_ENTRY_ID = "01uau000001aFBFAA2";
+const TEST_FALLBACK_UNIT_PRICE = 200;
 
 export default function ProductLanding() {
   const productLandingCopy = PRODUCT_COPY.landing;
@@ -22,13 +28,14 @@ export default function ProductLanding() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedProduct, setSelectedProduct] = useState<ProductSummary | null>(null);
+  const [addToCartProductId, setAddToCartProductId] = useState<string | null>(null);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
   const [isProductsLoading, setIsProductsLoading] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedCatalogParam = searchParams.get("catalogId")?.trim() ?? "";
   const initialCatalogParamRef = useRef(selectedCatalogParam);
-  const navigate = useNavigate();
-  const { notifyError } = useNotification();
+  const { decisionSession } = useAuth();
+  const { notifyError, notifySuccess, notifyWarning } = useNotification();
 
   const loadCatalogOptions = useCallback(async () => {
     setIsCatalogLoading(true);
@@ -204,6 +211,181 @@ export default function ProductLanding() {
 
   const hasActiveProductFilters = searchTerm.trim().length > 0 || selectedCategory !== "all";
 
+  const resolveBillingFrequency = useCallback((pricingTermUnit?: string): string | undefined => {
+    if (!pricingTermUnit) {
+      return undefined;
+    }
+
+    const normalizedUnit = pricingTermUnit.toLowerCase();
+    if (normalizedUnit.includes("month")) {
+      return "Monthly";
+    }
+    if (normalizedUnit.includes("quarter")) {
+      return "Quarterly";
+    }
+    if (normalizedUnit.includes("week")) {
+      return "Weekly";
+    }
+    if (normalizedUnit.includes("day")) {
+      return "Daily";
+    }
+    if (normalizedUnit.includes("year") || normalizedUnit.includes("annual")) {
+      return "Annual";
+    }
+    return undefined;
+  }, []);
+
+  const isCommitmentStyleModel = useCallback((sellingModelType?: string): boolean => {
+    if (!sellingModelType) {
+      return false;
+    }
+
+    const normalizedType = sellingModelType.toLowerCase();
+    return (
+      normalizedType.includes("commitment")
+      || normalizedType.includes("token")
+      || normalizedType.includes("usage")
+      || normalizedType.includes("consumption")
+      || normalizedType.includes("credit")
+    );
+  }, []);
+
+  const toIntegrationErrorMessage = useCallback(
+    (error: unknown): string => {
+      if (!(error instanceof Error)) {
+        return productLandingCopy.addToCartErrorMessage;
+      }
+
+      const rawMessage = error.message;
+      const payloadStart = rawMessage.indexOf("{");
+      if (payloadStart < 0) {
+        return rawMessage;
+      }
+
+      try {
+        const parsed = JSON.parse(rawMessage.slice(payloadStart)) as {
+          message?: unknown;
+          status?: { message?: unknown; errors?: Array<{ messageDetail?: unknown; messageTitle?: unknown; message?: unknown }> };
+          errorResponse?: Array<{ message?: unknown }>;
+        };
+
+        const cartApiMessage = parsed.errorResponse?.find((entry) => typeof entry.message === "string")?.message;
+        if (typeof cartApiMessage === "string" && cartApiMessage.trim().length > 0) {
+          return cartApiMessage.replace(/&#39;/g, "'");
+        }
+
+        const productApiMessage = parsed.status?.errors?.find((entry) => typeof entry.messageDetail === "string")?.messageDetail;
+        if (typeof productApiMessage === "string" && productApiMessage.trim().length > 0) {
+          return productApiMessage;
+        }
+
+        if (typeof parsed.status?.message === "string" && parsed.status.message.trim().length > 0) {
+          return parsed.status.message;
+        }
+
+        if (typeof parsed.message === "string" && parsed.message.trim().length > 0) {
+          return parsed.message;
+        }
+      } catch {
+        // Keep original message when backend payload is not valid JSON.
+      }
+
+      return rawMessage;
+    },
+    [productLandingCopy.addToCartErrorMessage]
+  );
+
+  const handleAddToCart = useCallback(
+    async (product: ProductSummary) => {
+      const quoteId = decisionSession.quoteId?.trim() ?? "";
+      if (!quoteId) {
+        notifyWarning(productLandingCopy.missingQuoteWarningMessage);
+        return;
+      }
+
+      const selectedOption = product.productSellingModelOptions.find((option) => option.isDefault)
+        ?? product.productSellingModelOptions[0];
+      const selectedModel = selectedOption?.model;
+      const productId = product.id;
+      const pricebookEntryId = selectedOption?.pricebookEntryId ?? TEST_FALLBACK_PRICEBOOK_ENTRY_ID;
+      const unitPrice = selectedOption?.unitPrice ?? TEST_FALLBACK_UNIT_PRICE;
+
+      if (!productId || !pricebookEntryId || typeof unitPrice !== "number") {
+        notifyWarning(productLandingCopy.addToCartPreconditionWarningMessage);
+        return;
+      }
+
+      const payloadItem: {
+        Product2Id: string;
+        PricebookEntryId: string;
+        UnitPrice: string;
+        Quantity: string;
+        PeriodBoundary?: string;
+        BillingFrequency?: string;
+      } = {
+        Product2Id: productId,
+        PricebookEntryId: pricebookEntryId,
+        UnitPrice: unitPrice.toString(),
+        Quantity: "1",
+      };
+
+      const sellingModelType = selectedModel?.sellingModelType;
+      if (isCommitmentStyleModel(sellingModelType)) {
+        notifyWarning(productLandingCopy.addToCartCommitmentUnsupportedWarningMessage);
+        return;
+      }
+
+      const normalizedSellingModelType = sellingModelType?.toLowerCase() ?? "";
+      const isSubscriptionModel =
+        normalizedSellingModelType.includes("subscription")
+        || normalizedSellingModelType.includes("term")
+        || normalizedSellingModelType.includes("evergreen");
+      if (isSubscriptionModel) {
+        const billingFrequency = resolveBillingFrequency(selectedModel?.pricingTermUnit);
+        if (!billingFrequency) {
+          notifyWarning(productLandingCopy.addToCartMissingBillingFrequencyWarningMessage);
+          return;
+        }
+
+        payloadItem.PeriodBoundary = "Anniversary";
+        payloadItem.BillingFrequency = billingFrequency;
+      }
+
+      setAddToCartProductId(productId);
+      try {
+        const response = await addProductsToCart({
+          quoteID: quoteId,
+          productsToAddList: [payloadItem],
+        });
+
+        if (!response.isSuccess) {
+          throw new Error(response.message ?? productLandingCopy.addToCartErrorMessage);
+        }
+
+        notifySuccess(response.message ?? productLandingCopy.addToCartSuccessMessage);
+      } catch (error) {
+        notifyError(toIntegrationErrorMessage(error));
+      } finally {
+        setAddToCartProductId((currentProductId) => (currentProductId === productId ? null : currentProductId));
+      }
+    },
+    [
+      decisionSession.quoteId,
+      notifyError,
+      notifySuccess,
+      notifyWarning,
+      productLandingCopy.addToCartErrorMessage,
+      productLandingCopy.addToCartCommitmentUnsupportedWarningMessage,
+      productLandingCopy.addToCartMissingBillingFrequencyWarningMessage,
+      productLandingCopy.addToCartPreconditionWarningMessage,
+      productLandingCopy.addToCartSuccessMessage,
+      productLandingCopy.missingQuoteWarningMessage,
+      isCommitmentStyleModel,
+      resolveBillingFrequency,
+      toIntegrationErrorMessage,
+    ]
+  );
+
   useEffect(() => {
     const isSelectedOptionPresent = categoryFilterOptions.some((option) => option.value === selectedCategory);
     if (!isSelectedOptionPresent) {
@@ -286,8 +468,13 @@ export default function ProductLanding() {
       <ProductList
         catalogOptionsCount={catalogOptions.length}
         isProductsLoading={isProductsLoading}
+        isAddToCartDisabled={(product) => {
+          return !product.id || addToCartProductId === product.id;
+        }}
+        isAddToCartLoading={(product) => Boolean(product.id && addToCartProductId === product.id)}
         labels={{
           addToCartCtaLabel: productLandingCopy.addToCartCtaLabel,
+          addingToCartCtaLabel: productLandingCopy.addingToCartCtaLabel,
           availabilityLabel: productLandingCopy.availabilityLabel,
           emptyCatalogMessage: productLandingCopy.emptyCatalogMessage,
           emptyMessage: hasActiveProductFilters ? productLandingCopy.emptyFilteredMessage : productLandingCopy.emptyMessage,
@@ -296,7 +483,7 @@ export default function ProductLanding() {
           productCodeLabel: productLandingCopy.productCodeLabel,
           productIdLabel: productLandingCopy.productIdLabel,
         }}
-        onAddToCart={() => navigate(ROUTES.cart)}
+        onAddToCart={handleAddToCart}
         onSelectProduct={setSelectedProduct}
         products={filteredProducts}
       />

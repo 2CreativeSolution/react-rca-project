@@ -6,6 +6,7 @@ import { formatAvailabilityDate } from "./formatters";
 
 type ProductListLabels = {
   addToCartCtaLabel: string;
+  addingToCartCtaLabel: string;
   availabilityLabel: string;
   emptyCatalogMessage: string;
   emptyMessage: string;
@@ -18,6 +19,8 @@ type ProductListLabels = {
 type ProductListProps = {
   catalogOptionsCount: number;
   isProductsLoading: boolean;
+  isAddToCartDisabled?: (product: ProductSummary) => boolean;
+  isAddToCartLoading?: (product: ProductSummary) => boolean;
   labels: ProductListLabels;
   onAddToCart: (product: ProductSummary) => void;
   onSelectProduct: (product: ProductSummary) => void;
@@ -27,6 +30,8 @@ type ProductListProps = {
 export default function ProductList({
   catalogOptionsCount,
   isProductsLoading,
+  isAddToCartDisabled,
+  isAddToCartLoading,
   labels,
   onAddToCart,
   onSelectProduct,
@@ -140,9 +145,10 @@ export default function ProductList({
                   variant="contained"
                   size="small"
                   startIcon={<ShoppingCartOutlinedIcon fontSize="small" />}
+                  disabled={isAddToCartDisabled?.(product) ?? false}
                   onClick={() => onAddToCart(product)}
                 >
-                  {labels.addToCartCtaLabel}
+                  {isAddToCartLoading?.(product) ? labels.addingToCartCtaLabel : labels.addToCartCtaLabel}
                 </Button>
               </Stack>
             </Paper>

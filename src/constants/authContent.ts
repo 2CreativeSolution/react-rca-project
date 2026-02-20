@@ -27,6 +27,7 @@ export const AUTH_COPY = {
     profileWarningMessage: "Account created, but your profile details are still updating.",
     syncWarningMessage: "Account created, but profile sync is still pending.",
     defaultQuoteWarningMessage: "Account created, but default quote setup is still pending.",
+    decisionWarningMessage: "Unable to verify active status right now. Redirecting to landing page.",
     validation: {
       fullNameRequired: "Full name is required.",
       invalidEmail: "Enter a valid email address.",

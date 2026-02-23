@@ -111,8 +111,44 @@ export type RemoveProductsFromCartPayload = {
   }>;
 };
 
+export type CreateOrderAddressData = {
+  billingToName: string;
+  billingStreet: string;
+  billingCity: string;
+  billingState: string;
+  billingPostalCode: string;
+  billingCountry: string;
+  shippingToName: string;
+  shippingStreet: string;
+  shippingCity: string;
+  shippingState: string;
+  shippingPostalCode: string;
+  shippingCountry: string;
+  email: string;
+  phone: string;
+};
+
 export type CreateOrderFromQuotePayload = {
   quoteId: string;
+  addressData: CreateOrderAddressData;
+};
+
+export type CreateOrderFromQuoteResult = {
+  success: boolean;
+  queued: boolean;
+  jobId: string | null;
+  message: string | null;
+};
+
+export type GetOrderStatusPayload = {
+  quoteId: string;
+};
+
+export type OrderProcessingStatus = "Processing" | "Completed" | "Failed" | "Unknown";
+
+export type GetOrderStatusResult = {
+  status: OrderProcessingStatus;
+  message: string | null;
 };
 
 export type CheckoutAddressDetails = {
@@ -644,6 +680,55 @@ function normalizeCartMutationResult(raw: unknown): CartMutationResult {
   };
 }
 
+function normalizeCreateOrderFromQuoteResult(raw: unknown): CreateOrderFromQuoteResult {
+  const candidates = collectCandidateRecords(raw);
+  const success = findBooleanField(candidates, "success") ?? findBooleanField(candidates, "isSuccess") ?? false;
+  const queued = findBooleanField(candidates, "queued") ?? false;
+  const jobId = findStringField(candidates, "jobId");
+  const message =
+    findStringField(candidates, "message")
+    || findStringField(candidates, "statusMessage")
+    || findStringField(candidates, "error");
+
+  return {
+    success,
+    queued,
+    jobId,
+    message,
+  };
+}
+
+function normalizeOrderProcessingStatus(value: string | null): OrderProcessingStatus {
+  const normalizedValue = value?.trim().toLowerCase();
+
+  if (normalizedValue === "processing") {
+    return "Processing";
+  }
+  if (normalizedValue === "completed") {
+    return "Completed";
+  }
+  if (normalizedValue === "failed") {
+    return "Failed";
+  }
+  return "Unknown";
+}
+
+function normalizeGetOrderStatusResult(raw: unknown): GetOrderStatusResult {
+  const candidates = collectCandidateRecords(raw);
+  const normalizedStatus = normalizeOrderProcessingStatus(
+    findStringField(candidates, "status") || findStringField(candidates, "orderStatus")
+  );
+  const message =
+    findStringField(candidates, "message")
+    || findStringField(candidates, "statusMessage")
+    || findStringField(candidates, "error");
+
+  return {
+    status: normalizedStatus,
+    message,
+  };
+}
+
 export async function callIntegration<T, P = unknown>(
   endpoint: string,
   payload: P
@@ -728,10 +813,18 @@ export async function removeProductsToCart(payload: RemoveProductsFromCartPayloa
   return normalizeCartMutationResult(response);
 }
 
-export async function createOrdersFromQuote(payload: CreateOrderFromQuotePayload): Promise<CartMutationResult> {
+export async function createOrdersFromQuote(payload: CreateOrderFromQuotePayload): Promise<CreateOrderFromQuoteResult> {
   const response = await callIntegration<unknown, CreateOrderFromQuotePayload>(
     INTEGRATION_ROUTES.createOrdersFromQuote,
     payload
   );
-  return normalizeCartMutationResult(response);
+  return normalizeCreateOrderFromQuoteResult(response);
+}
+
+export async function getOrderStatus(payload: GetOrderStatusPayload): Promise<GetOrderStatusResult> {
+  const response = await callIntegration<unknown, GetOrderStatusPayload>(
+    INTEGRATION_ROUTES.getOrderStatus,
+    payload
+  );
+  return normalizeGetOrderStatusResult(response);
 }

@@ -26,6 +26,7 @@ import {
   createOrdersFromQuote,
   type CartLineItem,
   type CartTotals,
+  type CreateOrderAddressData,
   type CheckoutAddressDetails,
   type CheckoutBillingDetails,
   type CreateOrderFromQuoteFuturePayload,
@@ -82,10 +83,35 @@ function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
+function normalizePhone(countryCode: string, phoneNumber: string): string {
+  return `${countryCode}${phoneNumber}`.replace(/\s+/g, "");
+}
+
 function toCreateOrderFromQuotePayload(payload: CreateOrderFromQuoteFuturePayload): CreateOrderFromQuotePayload {
-  // BE currently accepts only quoteId; keep mapper so full payload can be sent once contract expands.
+  const billingContact = payload.billing.contact;
+  const billingAddress = payload.billing.billingAddress;
+  const shippingAddress = payload.billing.shippingAddress;
+  const normalizedFullName = billingContact.fullName.trim();
+  const addressData: CreateOrderAddressData = {
+    billingToName: normalizedFullName,
+    billingStreet: billingAddress.addressLine1.trim(),
+    billingCity: billingAddress.city.trim(),
+    billingState: billingAddress.state.trim(),
+    billingPostalCode: billingAddress.postalCode.trim(),
+    billingCountry: billingAddress.country.trim(),
+    shippingToName: normalizedFullName,
+    shippingStreet: shippingAddress.addressLine1.trim(),
+    shippingCity: shippingAddress.city.trim(),
+    shippingState: shippingAddress.state.trim(),
+    shippingPostalCode: shippingAddress.postalCode.trim(),
+    shippingCountry: shippingAddress.country.trim(),
+    email: billingContact.email.trim(),
+    phone: normalizePhone(billingContact.phoneCountryCode, billingContact.phoneNumber),
+  };
+
   return {
     quoteId: payload.quoteId,
+    addressData,
   };
 }
 
@@ -194,7 +220,7 @@ function AddressFields({ address, disabled, onAddressChange, checkoutCopy }: Add
 
 export default function Checkout() {
   const checkoutCopy = PRODUCT_COPY.checkout;
-  const { notifyError, notifySuccess, notifyWarning } = useNotification();
+  const { notifyError, notifyWarning } = useNotification();
   const location = useLocation();
   const navigate = useNavigate();
   const [billingForm, setBillingForm] = useState<BillingFormState>(INITIAL_BILLING_FORM_STATE);
@@ -323,15 +349,28 @@ export default function Checkout() {
     }));
   };
 
+  const quoteDisplayValue = state.quoteName?.trim() || state.quoteId || checkoutCopy.quoteFallbackLabel;
+
   const actualPlaceOrder = async (payload: CreateOrderFromQuoteFuturePayload): Promise<void> => {
     setIsSubmittingOrder(true);
     try {
       const result = await createOrdersFromQuote(toCreateOrderFromQuotePayload(payload));
-      if (!result.isSuccess) {
+      if (!result.success) {
         throw new Error(result.message ?? checkoutCopy.placeOrderErrorMessage);
       }
-      notifySuccess(result.message ?? checkoutCopy.placeOrderSuccessMessage);
-      navigate(ROUTES.cart, { replace: true });
+      if (!result.queued) {
+        throw new Error(checkoutCopy.queueUnavailableMessage);
+      }
+
+      navigate(ROUTES.orderStatus, {
+        replace: true,
+        state: {
+          quoteId: payload.quoteId,
+          quoteDisplayValue,
+          jobId: result.jobId,
+          checkoutState: state,
+        },
+      });
     } catch (error) {
       notifyError(error instanceof Error ? error.message : checkoutCopy.placeOrderErrorMessage);
     } finally {
@@ -350,10 +389,8 @@ export default function Checkout() {
       return;
     }
 
-    await actualPlaceOrder(orderPayload);
+    void actualPlaceOrder(orderPayload);
   };
-
-  const quoteDisplayValue = state.quoteName?.trim() || state.quoteId || checkoutCopy.quoteFallbackLabel;
 
   return (
     <Stack spacing={2.5} sx={{ py: 1 }}>

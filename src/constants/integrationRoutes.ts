@@ -8,6 +8,7 @@ export const INTEGRATION_ROUTES = {
   editProductsToCart: "/api/editProductsToCart",
   removeProductsToCart: "/api/removeProductsToCart",
   createOrdersFromQuote: "/api/createOrdersFromQuote",
+  getOrderStatus: "/api/getOrderStatus",
   createDefaultQuote: "/api/createDefaultQuote",
   decisionApi: "/api/decisionapi",
 } as const;

@@ -24,6 +24,7 @@ import ProductLanding from "./pages/ProductLanding";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
+import OrderStatus from "./pages/OrderStatus";
 import UserSettings from "./pages/UserSettings";
 
 function App() {
@@ -96,6 +97,15 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Checkout />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path={ROUTES.orderStatus}
+              element={
+                <ProtectedRoute>
+                  <OrderStatus />
                 </ProtectedRoute>
               }
             />

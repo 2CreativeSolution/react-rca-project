@@ -49,6 +49,29 @@ export type ProductSummary = {
   productSellingModelOptions: ProductSellingModelOptionSummary[];
 };
 
+export type GetProductDetailsPayload = {
+  productId: string;
+};
+
+export type ProductDetailsAttribute = {
+  code?: string;
+  label?: string;
+  defaultValue?: string;
+  status?: string;
+};
+
+export type ProductDetailsAttributeCategory = {
+  id?: string;
+  code?: string;
+  name?: string;
+  attributes: ProductDetailsAttribute[];
+};
+
+export type ProductDetails = ProductSummary & {
+  imageUrls: string[];
+  attributeCategories: ProductDetailsAttributeCategory[];
+};
+
 export type ProductPricebookEntry = {
   id?: string;
   product2Id?: string;
@@ -423,6 +446,101 @@ function toProductSummary(value: unknown): ProductSummary | null {
   };
 }
 
+function readImageUrl(value: unknown): string | null {
+  if (typeof value === "string") {
+    return asNonEmptyString(value);
+  }
+
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  return asNonEmptyString(value.url)
+    ?? asNonEmptyString(value.imageUrl)
+    ?? asNonEmptyString(value.secureUrl)
+    ?? asNonEmptyString(value.src)
+    ?? asNonEmptyString(value.path);
+}
+
+function toProductImageUrls(value: unknown, fallbackImageUrl?: string): string[] {
+  if (!isRecord(value)) {
+    return fallbackImageUrl ? [fallbackImageUrl] : [];
+  }
+
+  const urls: string[] = [];
+  const add = (candidate: string | null): void => {
+    if (!candidate || urls.includes(candidate)) {
+      return;
+    }
+    urls.push(candidate);
+  };
+
+  add(asNonEmptyString(value.imageUrl));
+  add(asNonEmptyString(value.defaultImageUrl));
+  add(asNonEmptyString(value.thumbnailUrl));
+
+  if (Array.isArray(value.imageUrls)) {
+    value.imageUrls.forEach((entry) => add(readImageUrl(entry)));
+  }
+
+  if (Array.isArray(value.images)) {
+    value.images.forEach((entry) => add(readImageUrl(entry)));
+  }
+
+  add(fallbackImageUrl ?? null);
+  return urls;
+}
+
+function toProductAttributeCategories(value: unknown): ProductDetailsAttributeCategory[] {
+  if (!isRecord(value)) {
+    return [];
+  }
+
+  const source = Array.isArray(value.attributeCategory)
+    ? value.attributeCategory
+    : Array.isArray(value.attributeCategories)
+      ? value.attributeCategories
+      : [];
+
+  return source
+    .filter((category): category is UnknownRecord => isRecord(category))
+    .map((category) => {
+      const attributes = Array.isArray(category.attributes)
+        ? category.attributes
+            .filter((attribute): attribute is UnknownRecord => isRecord(attribute))
+            .map((attribute) => ({
+              code: asNonEmptyString(attribute.code) ?? undefined,
+              label: asNonEmptyString(attribute.label) ?? asNonEmptyString(attribute.name) ?? undefined,
+              defaultValue: asNonEmptyString(attribute.defaultValue) ?? undefined,
+              status: asNonEmptyString(attribute.status) ?? undefined,
+            }))
+        : [];
+
+      return {
+        id: asNonEmptyString(category.id) ?? undefined,
+        code: asNonEmptyString(category.code) ?? undefined,
+        name: asNonEmptyString(category.name) ?? undefined,
+        attributes,
+      };
+    });
+}
+
+function toProductDetails(value: unknown): ProductDetails | null {
+  const summary = toProductSummary(value);
+  if (!summary || !isRecord(value)) {
+    return null;
+  }
+
+  const imageUrls = toProductImageUrls(value, summary.imageUrl);
+
+  return {
+    ...summary,
+    imageUrl: imageUrls[0] ?? summary.imageUrl,
+    imageUrls,
+    attributeCategories: toProductAttributeCategories(value),
+  };
+}
+
 function normalizeListProductsResponse(raw: unknown): ProductSummary[] {
   const candidates = collectCandidateRecords(raw);
 
@@ -441,6 +559,35 @@ function normalizeListProductsResponse(raw: unknown): ProductSummary[] {
   }
 
   throw new Error("List products response is missing a valid products array.");
+}
+
+function normalizeGetProductDetailsResponse(raw: unknown): ProductDetails {
+  if (
+    isRecord(raw)
+    && isRecord(raw.data)
+    && isRecord(raw.data.result)
+    && Array.isArray(raw.data.result.products)
+    && raw.data.result.products.length > 0
+  ) {
+    const detailedProduct = toProductDetails(raw.data.result.products[0]);
+    if (detailedProduct) {
+      return detailedProduct;
+    }
+  }
+
+  const candidates = collectCandidateRecords(raw);
+  for (const candidate of candidates) {
+    if (!Array.isArray(candidate.products) || candidate.products.length === 0) {
+      continue;
+    }
+
+    const detailedProduct = toProductDetails(candidate.products[0]);
+    if (detailedProduct) {
+      return detailedProduct;
+    }
+  }
+
+  throw new Error("Product details response is missing a valid product payload.");
 }
 
 function extractLineItems(candidates: UnknownRecord[]): unknown[] {
@@ -805,6 +952,16 @@ export async function listProducts(
     payload
   );
   return normalizeListProductsResponse(response);
+}
+
+export async function getProductDetails(
+  payload: GetProductDetailsPayload
+): Promise<ProductDetails> {
+  const response = await callIntegration<unknown, GetProductDetailsPayload>(
+    INTEGRATION_ROUTES.getProductDetails,
+    payload
+  );
+  return normalizeGetProductDetailsResponse(response);
 }
 
 export async function getQuotesWithQuoteLines(payload: { quoteId: string }): Promise<CartQuote> {

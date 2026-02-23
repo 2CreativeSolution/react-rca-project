@@ -183,6 +183,9 @@ export type CartLineItem = {
   lineTotal: number | null;
   billingFrequency: string | null;
   periodBoundary: string | null;
+  isChild: boolean;
+  parentQuoteLineItemId: string | null;
+  depth: number;
 };
 
 export type CartTotals = {
@@ -275,16 +278,6 @@ function findBooleanField(candidates: UnknownRecord[], key: string): boolean | n
   for (const candidate of candidates) {
     if (typeof candidate[key] === "boolean") {
       return candidate[key] as boolean;
-    }
-  }
-  return null;
-}
-
-function findNumberField(candidates: UnknownRecord[], key: string): number | null {
-  for (const candidate of candidates) {
-    const value = asNumberLike(candidate[key]);
-    if (value !== null) {
-      return value;
     }
   }
   return null;
@@ -542,7 +535,11 @@ function readFromRecord(record: UnknownRecord, keys: string[]): unknown {
   return undefined;
 }
 
-function toCartLineItem(value: unknown, index: number): CartLineItem | null {
+function toCartLineItem(
+  value: unknown,
+  index: number,
+  options: { depth: number; parentQuoteLineItemId: string | null }
+): CartLineItem | null {
   if (!isRecord(value)) {
     return null;
   }
@@ -584,12 +581,17 @@ function toCartLineItem(value: unknown, index: number): CartLineItem | null {
 
   const quantity = asNumberLike(readFromRecord(value, ["quantity", "Quantity"]));
   const unitPrice = asNumberLike(readFromRecord(value, ["unitPrice", "UnitPrice"]));
-  const lineTotal = asNumberLike(readFromRecord(value, ["lineTotal", "totalPrice", "TotalPrice", "netAmount"]));
+  const mappedLineTotal = asNumberLike(
+    readFromRecord(value, ["lineTotal", "lineItemSubTotal", "totalPrice", "TotalPrice", "netAmount"])
+  );
+  const lineTotal = mappedLineTotal ?? (quantity !== null && unitPrice !== null ? quantity * unitPrice : null);
 
   // Keep UI identity separate from backend mutation identity so rows without server ids remain renderable.
   const uiId =
     quoteLineItemId ??
-    `${productId ?? "line"}-${productName}-${index}`.toLowerCase().replace(/\s+/g, "-");
+    `${options.parentQuoteLineItemId ?? "line"}-${options.depth}-${index}-${productId ?? "line"}-${productName}`
+      .toLowerCase()
+      .replace(/\s+/g, "-");
 
   return {
     uiId,
@@ -601,7 +603,39 @@ function toCartLineItem(value: unknown, index: number): CartLineItem | null {
     lineTotal,
     billingFrequency: asNonEmptyString(readFromRecord(value, ["billingFrequency", "BillingFrequency"])),
     periodBoundary: asNonEmptyString(readFromRecord(value, ["periodBoundary", "PeriodBoundary"])),
+    isChild: options.depth > 0,
+    parentQuoteLineItemId: options.parentQuoteLineItemId,
+    depth: options.depth,
   };
+}
+
+function toCartLineItems(
+  values: unknown[],
+  options: { depth: number; parentQuoteLineItemId: string | null }
+): CartLineItem[] {
+  const lineItems: CartLineItem[] = [];
+
+  values.forEach((value, index) => {
+    const line = toCartLineItem(value, index, options);
+    if (!line) {
+      return;
+    }
+
+    lineItems.push(line);
+
+    if (!isRecord(value) || !Array.isArray(value.childItems) || value.childItems.length === 0) {
+      return;
+    }
+
+    lineItems.push(
+      ...toCartLineItems(value.childItems, {
+        depth: options.depth + 1,
+        parentQuoteLineItemId: line.quoteLineItemId,
+      })
+    );
+  });
+
+  return lineItems;
 }
 
 function normalizeCartQuote(raw: unknown): CartQuote {
@@ -618,19 +652,14 @@ function normalizeCartQuote(raw: unknown): CartQuote {
 
   const extractedLineItems = extractLineItems(candidates);
   const lineItemSource = extractedLineItems.length > 0 ? extractedLineItems : findLikelyLineItems(raw);
-  const lineItems = lineItemSource
-    .map((item, index) => toCartLineItem(item, index))
-    .filter((item): item is CartLineItem => Boolean(item));
+  const lineItems = toCartLineItems(lineItemSource, {
+    depth: 0,
+    parentQuoteLineItemId: null,
+  });
 
-  const rawTotal =
-    findNumberField(candidates, "totalAmount") ??
-    findNumberField(candidates, "grandTotal") ??
-    findNumberField(candidates, "quoteTotal") ??
-    findNumberField(candidates, "quoteSubTotal") ??
-    findNumberField(candidates, "totalPrice") ??
-    findNumberField(candidates, "netAmount");
+  const summaryLineItems = lineItems.filter((item) => !item.isChild);
 
-  const computedTotal = lineItems.reduce((sum, item) => {
+  const computedTotal = summaryLineItems.reduce((sum, item) => {
     if (item.quantity === null || item.unitPrice === null) {
       return sum;
     }
@@ -638,10 +667,7 @@ function normalizeCartQuote(raw: unknown): CartQuote {
     return sum + item.quantity * item.unitPrice;
   }, 0);
 
-  const hasComputableTotal = lineItems.some((item) => item.quantity !== null && item.unitPrice !== null);
-  const totalAmount = rawTotal ?? (hasComputableTotal ? computedTotal : null);
-
-  const itemCount = lineItems.reduce((sum, item) => {
+  const itemCount = summaryLineItems.reduce((sum, item) => {
     if (item.quantity !== null && item.quantity > 0) {
       return sum + item.quantity;
     }
@@ -655,11 +681,11 @@ function normalizeCartQuote(raw: unknown): CartQuote {
     lineItems,
     totals: {
       itemCount,
-      totalAmount,
+      totalAmount: computedTotal,
       currencyCode: findStringField(candidates, "currencyCode") ?? "USD",
     },
     totalsComputation: {
-      isFallbackComputed: rawTotal === null,
+      isFallbackComputed: false,
     },
   };
 }

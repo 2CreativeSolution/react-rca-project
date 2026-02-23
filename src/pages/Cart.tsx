@@ -97,6 +97,9 @@ export default function Cart() {
         notifyWarning(cartCopy.missingQuoteWarning);
         return;
       }
+      if (line.isChild) {
+        return;
+      }
 
       if (!line.quoteLineItemId) {
         notifyWarning(cartCopy.missingLineIdWarning);
@@ -167,6 +170,9 @@ export default function Cart() {
     async (line: CartLineItem) => {
       if (!quoteId) {
         notifyWarning(cartCopy.missingQuoteWarning);
+        return;
+      }
+      if (line.isChild) {
         return;
       }
 

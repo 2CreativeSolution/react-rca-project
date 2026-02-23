@@ -6,6 +6,7 @@ import {
   Button,
   Checkbox,
   Chip,
+  Collapse,
   Divider,
   FormControlLabel,
   Grid,
@@ -495,12 +496,13 @@ export default function Checkout() {
                   label={checkoutCopy.sameAsBillingLabel}
                 />
               </Stack>
-              <AddressFields
-                address={billingForm.useBillingAsShipping ? billingForm.billingAddress : billingForm.shippingAddress}
-                checkoutCopy={checkoutCopy}
-                disabled={billingForm.useBillingAsShipping}
-                onAddressChange={(field, value) => handleAddressChange("shippingAddress", field, value)}
-              />
+              <Collapse in={!billingForm.useBillingAsShipping} timeout="auto" unmountOnExit>
+                <AddressFields
+                  address={billingForm.shippingAddress}
+                  checkoutCopy={checkoutCopy}
+                  onAddressChange={(field, value) => handleAddressChange("shippingAddress", field, value)}
+                />
+              </Collapse>
             </Stack>
           </Paper>
         </Grid>

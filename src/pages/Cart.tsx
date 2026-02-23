@@ -1,12 +1,13 @@
 import { Alert, CircularProgress, Chip, Grid, Paper, Stack, Typography } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import CartLineList from "../components/cart/CartLineList";
 import CartSummary from "../components/cart/CartSummary";
+import { ROUTES } from "../constants/routes";
 import { PRODUCT_COPY } from "../constants/productContent";
 import { useAuth } from "../context/useAuth";
 import { useNotification } from "../context/useNotification";
 import {
-  createOrdersFromQuote,
   editProductsToCart,
   getQuotesWithQuoteLines,
   removeProductsToCart,
@@ -22,6 +23,7 @@ export default function Cart() {
   const cartCopy = PRODUCT_COPY.cart;
   const { decisionSession } = useAuth();
   const { notifyError, notifySuccess, notifyWarning } = useNotification();
+  const navigate = useNavigate();
 
   const quoteId = decisionSession.quoteId?.trim() ?? "";
 
@@ -29,7 +31,6 @@ export default function Cart() {
   const [drafts, setDrafts] = useState<Record<string, CartLineDraft>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [linePendingId, setLinePendingId] = useState<string | null>(null);
-  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   const missingQuoteWarningShownRef = useRef(false);
 
@@ -173,11 +174,19 @@ export default function Cart() {
         return;
       }
 
+      // TODO(BE dependency): removeProductsToCart requires Product2Id in payload.
+      // Keep this guard until cart API reliably returns Product2Id for each line item.
+      if (!line.productId) {
+        notifyError(cartCopy.loadErrorMessage);
+        return;
+      }
+
       setLinePendingId(line.uiId);
       try {
         const result = await removeProductsToCart({
           quoteID: quoteId,
           quoteLineItemID: line.quoteLineItemId,
+          productsToAddList: [{ Product2Id: line.productId }],
         });
 
         if (!result.isSuccess) {
@@ -205,35 +214,26 @@ export default function Cart() {
     ]
   );
 
-  const handlePlaceOrder = useCallback(async () => {
+  const handlePlaceOrder = useCallback(() => {
     if (!quoteId) {
       notifyWarning(cartCopy.missingQuoteWarning);
       return;
     }
 
-    setIsPlacingOrder(true);
-    try {
-      const result = await createOrdersFromQuote({ quoteId });
-      if (!result.isSuccess) {
-        throw new Error(result.message ?? cartCopy.orderErrorMessage);
-      }
-      notifySuccess(result.message ?? cartCopy.orderSuccessMessage);
-      await loadCart();
-    } catch (error) {
-      notifyError(error instanceof Error ? error.message : cartCopy.orderErrorMessage);
-    } finally {
-      setIsPlacingOrder(false);
+    if (!cartQuote || cartQuote.lineItems.length === 0) {
+      notifyWarning(cartCopy.emptyCartMessage);
+      return;
     }
-  }, [
-    cartCopy.missingQuoteWarning,
-    cartCopy.orderErrorMessage,
-    cartCopy.orderSuccessMessage,
-    loadCart,
-    notifyError,
-    notifySuccess,
-    notifyWarning,
-    quoteId,
-  ]);
+
+    navigate(ROUTES.checkout, {
+      state: {
+        quoteId,
+        lineItems: cartQuote.lineItems,
+        totals: cartQuote.totals,
+        totalsComputation: cartQuote.totalsComputation,
+      },
+    });
+  }, [cartCopy.emptyCartMessage, cartCopy.missingQuoteWarning, cartQuote, navigate, notifyWarning, quoteId]);
 
   const isMissingQuote = !quoteId;
   const lineItems = cartQuote?.lineItems ?? [];
@@ -305,7 +305,7 @@ export default function Cart() {
             <CartSummary
               totals={summary}
               totalsComputation={cartQuote.totalsComputation}
-              isPlacingOrder={isPlacingOrder}
+              isPlacingOrder={false}
               labels={{
                 fallbackTotalWarningMessage: cartCopy.fallbackTotalWarningMessage,
                 itemCountLabel: cartCopy.itemCountLabel,

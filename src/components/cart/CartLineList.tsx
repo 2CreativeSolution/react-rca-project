@@ -2,7 +2,7 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import {
   Box,
-  Button,
+  IconButton,
   Paper,
   Stack,
   Table,
@@ -11,6 +11,7 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import type { CartLineItem } from "../../services/salesforceApi";
@@ -101,25 +102,32 @@ export default function CartLineList({
                   <TableCell align="center">{formatCurrency(displayedLineTotal, currencyCode)}</TableCell>
                   <TableCell align="center">
                     <Stack direction="row" spacing={1} justifyContent="center">
-                      <Button
-                        size="small"
-                        color="error"
-                        variant="outlined"
-                        startIcon={<DeleteOutlineIcon fontSize="small" />}
-                        disabled={isPending || !isMutable}
-                        onClick={() => onRemove(line)}
-                      >
-                        {labels.removeLabel}
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="contained"
-                        startIcon={<SaveOutlinedIcon fontSize="small" />}
-                        disabled={isPending || !isMutable}
-                        onClick={() => onSave(line)}
-                      >
-                        {labels.saveLabel}
-                      </Button>
+                      <Tooltip title={labels.saveLabel}>
+                        <span>
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            aria-label={labels.saveLabel}
+                            disabled={isPending || !isMutable}
+                            onClick={() => onSave(line)}
+                          >
+                            <SaveOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                      <Tooltip title={labels.removeLabel}>
+                        <span>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            aria-label={labels.removeLabel}
+                            disabled={isPending || !isMutable}
+                            onClick={() => onRemove(line)}
+                          >
+                            <DeleteOutlineIcon fontSize="small" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
                     </Stack>
                   </TableCell>
                 </TableRow>

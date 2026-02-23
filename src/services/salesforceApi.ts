@@ -37,12 +37,26 @@ export type CreateDefaultQuoteResponse = {
 export type ProductSummary = {
   id?: string;
   name: string;
+  nodeType?: string;
+  description?: string;
+  imageUrl?: string;
   productCode?: string;
   isActive?: boolean;
   availabilityDate?: string;
   productSpecificationTypeName?: string;
   categories: string[];
+  pricebookEntries: ProductPricebookEntry[];
   productSellingModelOptions: ProductSellingModelOptionSummary[];
+};
+
+export type ProductPricebookEntry = {
+  id?: string;
+  product2Id?: string;
+  pricebook2Id?: string;
+  unitPrice?: number;
+  currencyIsoCode?: string;
+  productSellingModelId?: string;
+  isActive?: boolean;
 };
 
 export type ProductSellingModelOptionSummary = {
@@ -92,10 +106,25 @@ export type EditProductsToCartPayload = {
 export type RemoveProductsFromCartPayload = {
   quoteID: string;
   quoteLineItemID: string;
+  productsToAddList: Array<{
+    Product2Id: string;
+  }>;
 };
 
 export type CreateOrderFromQuotePayload = {
   quoteId: string;
+};
+
+export type CheckoutBillingDetails = {
+  fullName: string;
+  email: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
 };
 
 export type CartLineItem = {
@@ -118,6 +147,14 @@ export type CartTotals = {
 
 export type TotalsComputationMeta = {
   isFallbackComputed: boolean;
+};
+
+export type CreateOrderFromQuoteFuturePayload = {
+  quoteId: string;
+  billing: CheckoutBillingDetails;
+  lineItems: CartLineItem[];
+  totals: CartTotals;
+  totalsComputation: TotalsComputationMeta;
 };
 
 export type CartQuote = {
@@ -272,8 +309,9 @@ function toProductSummary(value: unknown): ProductSummary | null {
     return null;
   }
 
-  const id = asNonEmptyString(value.id) ?? asNonEmptyString(value.Id) ?? undefined;
-  const productCode = asNonEmptyString(value.productCode) ?? asNonEmptyString(value.ProductCode) ?? undefined;
+  const id = asNonEmptyString(value.id) ?? undefined;
+  const imageUrl = asNonEmptyString(value.imageUrl) ?? undefined;
+  const productCode = asNonEmptyString(value.productCode) ?? undefined;
   const isActive = typeof value.isActive === "boolean" ? value.isActive : undefined;
   const availabilityDate = asNonEmptyString(value.availabilityDate) ?? undefined;
   const productSpecificationTypeName = isRecord(value.productSpecificationType)
@@ -284,6 +322,19 @@ function toProductSummary(value: unknown): ProductSummary | null {
         .map((category) => (isRecord(category) ? asNonEmptyString(category.name) : null))
         .filter((categoryName): categoryName is string => Boolean(categoryName))
     : [];
+  const pricebookEntries = Array.isArray(value.pricebookEntries)
+    ? value.pricebookEntries
+        .filter((entry): entry is UnknownRecord => isRecord(entry))
+        .map((entry) => ({
+          id: asNonEmptyString(entry.id) ?? undefined,
+          product2Id: asNonEmptyString(entry.product2Id) ?? undefined,
+          pricebook2Id: asNonEmptyString(entry.pricebook2Id) ?? undefined,
+          unitPrice: asNumberLike(entry.unitPrice) ?? undefined,
+          currencyIsoCode: asNonEmptyString(entry.currencyIsoCode) ?? undefined,
+          productSellingModelId: asNonEmptyString(entry.productSellingModelId) ?? undefined,
+          isActive: typeof entry.isActive === "boolean" ? entry.isActive : undefined,
+        }))
+    : [];
   const productSellingModelOptions = Array.isArray(value.productSellingModelOptions)
     ? value.productSellingModelOptions
         .map((option) => {
@@ -292,31 +343,22 @@ function toProductSummary(value: unknown): ProductSummary | null {
           }
 
           const model = isRecord(option.productSellingModel) ? option.productSellingModel : {};
-          const nestedPricebookEntry = isRecord(option.pricebookEntry) ? option.pricebookEntry : {};
+          const modelId = asNonEmptyString(model.id) ?? undefined;
+          const matchedPricebookEntry = pricebookEntries.find((entry) => modelId && entry.productSellingModelId === modelId);
           return {
-            id: asNonEmptyString(option.id) ?? asNonEmptyString(option.Id) ?? undefined,
-            productId: asNonEmptyString(option.productId) ?? asNonEmptyString(option.Product2Id) ?? undefined,
-            pricebookEntryId:
-              asNonEmptyString(option.pricebookEntryId) ??
-              asNonEmptyString(option.PricebookEntryId) ??
-              asNonEmptyString(nestedPricebookEntry.id) ??
-              asNonEmptyString(nestedPricebookEntry.Id) ??
-              undefined,
-            unitPrice:
-              asNumberLike(option.unitPrice) ??
-              asNumberLike(option.UnitPrice) ??
-              asNumberLike(nestedPricebookEntry.unitPrice) ??
-              asNumberLike(nestedPricebookEntry.UnitPrice) ??
-              undefined,
+            id: asNonEmptyString(option.id) ?? undefined,
+            // ProductSummary.id is the canonical Product2Id for this endpoint.
+            productId: id ?? asNonEmptyString(option.productId) ?? undefined,
+            pricebookEntryId: asNonEmptyString(option.pricebookEntryId) ?? matchedPricebookEntry?.id ?? undefined,
+            unitPrice: asNumberLike(option.unitPrice) ?? matchedPricebookEntry?.unitPrice ?? undefined,
             isDefault: option.isDefault === true,
             model: {
-              id: asNonEmptyString(model.id) ?? asNonEmptyString(model.Id) ?? undefined,
-              name: asNonEmptyString(model.name) ?? asNonEmptyString(model.Name) ?? undefined,
-              status: asNonEmptyString(model.status) ?? asNonEmptyString(model.Status) ?? undefined,
-              sellingModelType:
-                asNonEmptyString(model.sellingModelType) ?? asNonEmptyString(model.SellingModelType) ?? undefined,
-              pricingTermUnit: asNonEmptyString(model.pricingTermUnit) ?? asNonEmptyString(model.PricingTermUnit) ?? undefined,
-              pricingTerm: asNumber(model.pricingTerm) ?? asNumber(model.PricingTerm) ?? undefined,
+              id: modelId,
+              name: asNonEmptyString(model.name) ?? undefined,
+              status: asNonEmptyString(model.status) ?? undefined,
+              sellingModelType: asNonEmptyString(model.sellingModelType) ?? undefined,
+              pricingTermUnit: asNonEmptyString(model.pricingTermUnit) ?? undefined,
+              pricingTerm: asNumber(model.pricingTerm) ?? undefined,
               doesAutoRenewByDefault:
                 typeof model.doesAutoRenewByDefault === "boolean" ? model.doesAutoRenewByDefault : undefined,
             },
@@ -328,11 +370,15 @@ function toProductSummary(value: unknown): ProductSummary | null {
   return {
     id,
     name,
+    nodeType: asNonEmptyString(value.nodeType) ?? undefined,
+    description: asNonEmptyString(value.description) ?? undefined,
+    imageUrl,
     productCode,
     isActive,
     availabilityDate,
     productSpecificationTypeName,
     categories,
+    pricebookEntries,
     productSellingModelOptions,
   };
 }
@@ -471,10 +517,16 @@ function toCartLineItem(value: unknown, index: number): CartLineItem | null {
     (isRecord(value.product) ? value.product : null) ||
     (isRecord(value.product2) ? value.product2 : null) ||
     (isRecord(value.Product2) ? value.Product2 : null);
+  const pricebookEntryRecord =
+    (isRecord(value.pricebookEntry) ? value.pricebookEntry : null) ||
+    (isRecord(value.PricebookEntry) ? value.PricebookEntry : null);
 
   const productId =
-    asNonEmptyString(readFromRecord(value, ["productId", "Product2Id"])) ||
-    (productRecord ? asNonEmptyString(readFromRecord(productRecord, ["id", "Id"])) : null);
+    asNonEmptyString(readFromRecord(value, ["productId", "product2Id", "product2ID", "Product2Id", "Product2ID"])) ||
+    (productRecord ? asNonEmptyString(readFromRecord(productRecord, ["id", "Id", "productId", "Product2Id"])) : null) ||
+    (pricebookEntryRecord
+      ? asNonEmptyString(readFromRecord(pricebookEntryRecord, ["product2Id", "Product2Id", "Product2ID"]))
+      : null);
 
   const productName =
     asNonEmptyString(readFromRecord(value, ["productName", "Name", "name"])) ||

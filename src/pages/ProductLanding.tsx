@@ -1,5 +1,6 @@
 import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 import { CircularProgress, FormControl, InputLabel, MenuItem, Paper, Select, Stack, Typography } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import FilterToolbar from "../components/filters/FilterToolbar";
 import { useSearchParams } from "react-router-dom";
@@ -13,12 +14,6 @@ import { getCatalogOptions, type CatalogOption } from "../services/catalog/catal
 import { addProductsToCart, listProducts, type ProductSummary } from "../services/salesforceApi";
 
 const UNCATEGORIZED_FILTER_VALUE = "__filter_uncategorized__";
-// TEMPORARY (accepted test-only risk): Backend add-to-cart payload sometimes omits
-// pricebook/unit price for products. Keep these test fallbacks until the API
-// consistently returns pricebookEntryId + unitPrice.
-// TODO: Remove these constants and hard-fail when backend pricing metadata is complete.
-const TEST_FALLBACK_PRICEBOOK_ENTRY_ID = "01uau000001aFBFAA2";
-const TEST_FALLBACK_UNIT_PRICE = 200;
 
 export default function ProductLanding() {
   const productLandingCopy = PRODUCT_COPY.landing;
@@ -307,8 +302,11 @@ export default function ProductLanding() {
         ?? product.productSellingModelOptions[0];
       const selectedModel = selectedOption?.model;
       const productId = product.id;
-      const pricebookEntryId = selectedOption?.pricebookEntryId ?? TEST_FALLBACK_PRICEBOOK_ENTRY_ID;
-      const unitPrice = selectedOption?.unitPrice ?? TEST_FALLBACK_UNIT_PRICE;
+      const matchedEntry = product.pricebookEntries.find(
+        (entry) => entry.productSellingModelId && entry.productSellingModelId === selectedModel?.id
+      );
+      const pricebookEntryId = selectedOption?.pricebookEntryId ?? matchedEntry?.id;
+      const unitPrice = selectedOption?.unitPrice ?? matchedEntry?.unitPrice;
 
       if (!productId || !pricebookEntryId || typeof unitPrice !== "number") {
         notifyWarning(productLandingCopy.addToCartPreconditionWarningMessage);
@@ -406,7 +404,43 @@ export default function ProductLanding() {
 
   return (
     <Stack spacing={2.5} sx={{ py: 1 }}>
-      <Typography variant="h4">{productLandingCopy.title}</Typography>
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        spacing={1.5}
+        sx={{ flexWrap: "wrap" }}
+      >
+        <Typography variant="h4">{productLandingCopy.title}</Typography>
+        <Stack
+          direction="row"
+          alignItems="center"
+          spacing={0.8}
+          sx={(theme) => ({
+            px: 1.6,
+            py: 0.85,
+            borderRadius: 2,
+            border: "1px solid",
+            borderColor: alpha(theme.palette.primary.main, 0.34),
+            backgroundColor: alpha(theme.palette.primary.light, 0.12),
+            boxShadow: `0 2px 10px ${alpha(theme.palette.primary.dark, 0.08)}`,
+          })}
+        >
+          <Typography color="text.secondary" variant="body2" sx={{ fontWeight: 600 }}>
+            {productLandingCopy.resultCountLabel}
+          </Typography>
+          <Typography
+            variant="h6"
+            sx={(theme) => ({
+              fontWeight: 800,
+              lineHeight: 1,
+              color: theme.palette.primary.dark,
+            })}
+          >
+            {filteredProducts.length}
+          </Typography>
+        </Stack>
+      </Stack>
       <Paper variant="outlined" sx={{ borderRadius: 2, p: 2.5 }}>
         <FormControl fullWidth>
           <InputLabel id="products-catalog-select-label">{productLandingCopy.catalogSelectLabel}</InputLabel>
@@ -457,10 +491,6 @@ export default function ProductLanding() {
               options: categoryFilterOptions,
               value: selectedCategory,
             }}
-            resultCount={{
-              label: productLandingCopy.resultCountLabel,
-              value: filteredProducts.length,
-            }}
           />
         </Stack>
       </Paper>
@@ -475,13 +505,12 @@ export default function ProductLanding() {
         labels={{
           addToCartCtaLabel: productLandingCopy.addToCartCtaLabel,
           addingToCartCtaLabel: productLandingCopy.addingToCartCtaLabel,
-          availabilityLabel: productLandingCopy.availabilityLabel,
+          bundleProductLabel: productLandingCopy.bundleProductLabel,
           emptyCatalogMessage: productLandingCopy.emptyCatalogMessage,
           emptyMessage: hasActiveProductFilters ? productLandingCopy.emptyFilteredMessage : productLandingCopy.emptyMessage,
           loadingMessage: productLandingCopy.loadingMessage,
           notAvailableLabel: productLandingCopy.notAvailableLabel,
-          productCodeLabel: productLandingCopy.productCodeLabel,
-          productIdLabel: productLandingCopy.productIdLabel,
+          priceLabel: productLandingCopy.priceLabel,
         }}
         onAddToCart={handleAddToCart}
         onSelectProduct={setSelectedProduct}

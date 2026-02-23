@@ -1,12 +1,13 @@
 import { Box, Button, Stack } from "@mui/material";
 import { useMemo, useState, type FormEvent } from "react";
-import { Link as RouterLink, Navigate } from "react-router-dom";
+import { Link as RouterLink, Navigate, useNavigate } from "react-router-dom";
 import AuthShell from "../components/ui/AuthShell";
 import AuthTextField from "../components/ui/AuthTextField";
 import { AUTH_COPY } from "../constants/authContent";
 import { ROUTES } from "../constants/routes";
 import { useAuth } from "../context/useAuth";
 import { useNotification } from "../context/useNotification";
+import { evaluateDecision } from "../services/salesforceApi";
 
 function isEmailValid(email: string) {
   return /\S+@\S+\.\S+/.test(email);
@@ -14,7 +15,16 @@ function isEmailValid(email: string) {
 
 export default function Signup() {
   const signupCopy = AUTH_COPY.signup;
-  const { initializeDefaultQuote, isAuthReady, isLoggedIn, signupWithCredentials, syncRcaIdentity } = useAuth();
+  const navigate = useNavigate();
+  const {
+    clearDecisionSession,
+    initializeDefaultQuote,
+    isAuthReady,
+    isLoggedIn,
+    setDecisionSession,
+    signupWithCredentials,
+    syncRcaIdentity,
+  } = useAuth();
   const { notifyError, notifyWarning } = useNotification();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -38,7 +48,7 @@ export default function Signup() {
     return null;
   }, [confirmPassword, email, fullName, password, signupCopy.validation]);
 
-  if (isAuthReady && isLoggedIn) {
+  if (isAuthReady && isLoggedIn && !isSubmitting) {
     return <Navigate to={ROUTES.catalog} replace />;
   }
 
@@ -71,6 +81,16 @@ export default function Signup() {
           notifyWarning(signupCopy.defaultQuoteWarningMessage);
         }
       }
+
+      try {
+        const decision = await evaluateDecision();
+        setDecisionSession(decision);
+      } catch {
+        clearDecisionSession();
+        notifyWarning(signupCopy.decisionWarningMessage);
+      }
+
+      navigate(ROUTES.catalog, { replace: true });
     } catch (error) {
       notifyError(error instanceof Error ? error.message : signupCopy.fallbackErrorMessage);
     } finally {

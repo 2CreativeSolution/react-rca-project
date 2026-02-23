@@ -115,16 +115,26 @@ export type CreateOrderFromQuotePayload = {
   quoteId: string;
 };
 
-export type CheckoutBillingDetails = {
-  fullName: string;
-  email: string;
-  phone: string;
+export type CheckoutAddressDetails = {
   addressLine1: string;
   addressLine2: string;
   city: string;
   state: string;
   postalCode: string;
   country: string;
+};
+
+export type CheckoutContactDetails = {
+  fullName: string;
+  email: string;
+  phoneCountryCode: string;
+  phoneNumber: string;
+};
+
+export type CheckoutBillingDetails = {
+  contact: CheckoutContactDetails;
+  billingAddress: CheckoutAddressDetails;
+  shippingAddress: CheckoutAddressDetails;
 };
 
 export type CartLineItem = {
@@ -159,6 +169,7 @@ export type CreateOrderFromQuoteFuturePayload = {
 
 export type CartQuote = {
   quoteId: string;
+  quoteName: string | null;
   quoteStatus: string | null;
   lineItems: CartLineItem[];
   totals: CartTotals;
@@ -564,6 +575,10 @@ function normalizeCartQuote(raw: unknown): CartQuote {
     findStringField(candidates, "quoteID") ||
     findStringField(candidates, "id") ||
     findStringField(candidates, "quoteNumber");
+  const quoteName =
+    findStringField(candidates, "quoteName") ||
+    findStringField(candidates, "name") ||
+    findStringField(candidates, "quoteNumber");
 
   const extractedLineItems = extractLineItems(candidates);
   const lineItemSource = extractedLineItems.length > 0 ? extractedLineItems : findLikelyLineItems(raw);
@@ -599,6 +614,7 @@ function normalizeCartQuote(raw: unknown): CartQuote {
 
   return {
     quoteId: quoteId ?? "",
+    quoteName,
     quoteStatus: findStringField(candidates, "quoteStatus") || findStringField(candidates, "status"),
     lineItems,
     totals: {

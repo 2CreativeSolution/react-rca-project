@@ -121,10 +121,17 @@ export default function Catalog() {
 
   const handleViewProducts = (item: CatalogItem) => {
     const searchParams = new URLSearchParams({ catalogId: item.id });
-    navigate({
-      pathname: ROUTES.products,
-      search: `?${searchParams.toString()}`,
-    });
+    navigate(
+      {
+        pathname: ROUTES.products,
+        search: `?${searchParams.toString()}`,
+      },
+      {
+        state: {
+          fromCatalog: true,
+        },
+      }
+    );
   };
 
   const handleClearFilters = () => {

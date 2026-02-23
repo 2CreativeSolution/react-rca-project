@@ -1,19 +1,25 @@
 import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
-import { CircularProgress, FormControl, InputLabel, MenuItem, Paper, Select, Stack, Typography } from "@mui/material";
+import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
+import { Button, CircularProgress, FormControl, InputLabel, MenuItem, Paper, Select, Stack, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import FilterToolbar from "../components/filters/FilterToolbar";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import ProductDetailsDialog from "../components/product/ProductDetailsDialog";
 import ProductList from "../components/product/ProductList";
 import { catalogGlassSurfaceSx } from "../components/catalog/styles";
 import { PRODUCT_COPY } from "../constants/productContent";
+import { ROUTES } from "../constants/routes";
 import { useAuth } from "../context/useAuth";
 import { useNotification } from "../context/useNotification";
 import { getCatalogOptions, type CatalogOption } from "../services/catalog/catalogService";
 import { addProductsToCart, listProducts, type ProductSummary } from "../services/salesforceApi";
 
 const UNCATEGORIZED_FILTER_VALUE = "__filter_uncategorized__";
+
+type ProductLandingRouteState = {
+  fromCatalog?: boolean;
+};
 
 export default function ProductLanding() {
   const productLandingCopy = PRODUCT_COPY.landing;
@@ -27,10 +33,13 @@ export default function ProductLanding() {
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
   const [isProductsLoading, setIsProductsLoading] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const selectedCatalogParam = searchParams.get("catalogId")?.trim() ?? "";
   const initialCatalogParamRef = useRef(selectedCatalogParam);
   const { decisionSession } = useAuth();
   const { notifyError, notifySuccess, notifyWarning } = useNotification();
+  const showCatalogBackButton = (location.state as ProductLandingRouteState | null)?.fromCatalog === true;
 
   const loadCatalogOptions = useCallback(async () => {
     setIsCatalogLoading(true);
@@ -391,6 +400,19 @@ export default function ProductLanding() {
     }
   }, [categoryFilterOptions, selectedCategory]);
 
+  const handleBackToCatalog = useCallback(() => {
+    const nextSearchParams = new URLSearchParams();
+    const resolvedCatalogId = selectedCatalogId || selectedCatalogParam;
+    if (resolvedCatalogId) {
+      nextSearchParams.set("catalogId", resolvedCatalogId);
+    }
+
+    navigate({
+      pathname: ROUTES.catalog,
+      search: nextSearchParams.toString() ? `?${nextSearchParams.toString()}` : "",
+    });
+  }, [navigate, selectedCatalogId, selectedCatalogParam]);
+
   if (isCatalogLoading) {
     return (
       <Stack alignItems="center" justifyContent="center" spacing={1.5} sx={{ py: 10 }}>
@@ -406,12 +428,24 @@ export default function ProductLanding() {
     <Stack spacing={2.5} sx={{ py: 1 }}>
       <Stack
         direction="row"
-        alignItems="center"
+        alignItems="flex-start"
         justifyContent="space-between"
         spacing={1.5}
         sx={{ flexWrap: "wrap" }}
       >
-        <Typography variant="h4">{productLandingCopy.title}</Typography>
+        <Stack spacing={0.8} alignItems="flex-start">
+          {showCatalogBackButton ? (
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<ArrowBackRoundedIcon fontSize="small" />}
+              onClick={handleBackToCatalog}
+            >
+              {productLandingCopy.backToCatalogLabel}
+            </Button>
+          ) : null}
+          <Typography variant="h4">{productLandingCopy.title}</Typography>
+        </Stack>
         <Stack
           direction="row"
           alignItems="center"
@@ -526,12 +560,15 @@ export default function ProductLanding() {
           closeDetailsAriaLabel: productLandingCopy.closeDetailsAriaLabel,
           defaultOptionLabel: productLandingCopy.defaultOptionLabel,
           detailsTitleFallback: productLandingCopy.detailsTitleFallback,
+          descriptionTitle: productLandingCopy.descriptionTitle,
+          descriptionUnavailableLabel: productLandingCopy.descriptionUnavailableLabel,
           inactiveLabel: productLandingCopy.inactiveLabel,
           modelStatusLabel: productLandingCopy.modelStatusLabel,
           modelTypeLabel: productLandingCopy.modelTypeLabel,
           noLabel: productLandingCopy.noLabel,
           notAvailableLabel: productLandingCopy.notAvailableLabel,
           noSellingModelMessage: productLandingCopy.noSellingModelMessage,
+          attributesTitle: productLandingCopy.attributesTitle,
           pricingTermLabel: productLandingCopy.pricingTermLabel,
           pricingTermUnitLabel: productLandingCopy.pricingTermUnitLabel,
           productCodeLabel: productLandingCopy.productCodeLabel,

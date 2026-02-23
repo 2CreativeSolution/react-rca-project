@@ -5,6 +5,7 @@ import {
   AccordionDetails,
   AccordionSummary,
   Chip,
+  Divider,
   Dialog,
   DialogContent,
   DialogTitle,
@@ -25,12 +26,15 @@ type ProductDetailsLabels = {
   closeDetailsAriaLabel: string;
   defaultOptionLabel: string;
   detailsTitleFallback: string;
+  descriptionTitle: string;
+  descriptionUnavailableLabel: string;
   inactiveLabel: string;
   modelStatusLabel: string;
   modelTypeLabel: string;
   noLabel: string;
   notAvailableLabel: string;
   noSellingModelMessage: string;
+  attributesTitle: string;
   pricingTermLabel: string;
   pricingTermUnitLabel: string;
   productCodeLabel: string;
@@ -100,44 +104,56 @@ export default function ProductDetailsDialog({ labels, onClose, product }: Produ
         }}
       >
         <Stack spacing={3}>
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Stack spacing={0.6}>
-                <Typography variant="caption" color="text.secondary">
-                  {labels.productIdLabel}
-                </Typography>
-                <Typography variant="body2">{product?.id ?? labels.notAvailableLabel}</Typography>
-              </Stack>
+          <Stack spacing={1}>
+            <Typography variant="subtitle1">{labels.descriptionTitle}</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {product?.description?.trim() ? product.description : labels.descriptionUnavailableLabel}
+            </Typography>
+          </Stack>
+
+          <Divider />
+
+          <Stack spacing={1.5}>
+            <Typography variant="subtitle1">{labels.attributesTitle}</Typography>
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Stack spacing={0.6}>
+                  <Typography variant="caption" color="text.secondary">
+                    {labels.productIdLabel}
+                  </Typography>
+                  <Typography variant="body2">{product?.id ?? labels.notAvailableLabel}</Typography>
+                </Stack>
+              </Grid>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Stack spacing={0.6}>
+                  <Typography variant="caption" color="text.secondary">
+                    {labels.productCodeLabel}
+                  </Typography>
+                  <Typography variant="body2">{product?.productCode ?? labels.notAvailableLabel}</Typography>
+                </Stack>
+              </Grid>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Stack spacing={0.6}>
+                  <Typography variant="caption" color="text.secondary">
+                    {labels.availabilityLabel}
+                  </Typography>
+                  <Typography variant="body2">
+                    {formatAvailabilityDate(product?.availabilityDate, labels.notAvailableLabel)}
+                  </Typography>
+                </Stack>
+              </Grid>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Stack spacing={0.6}>
+                  <Typography variant="caption" color="text.secondary">
+                    {labels.categoryLabel}
+                  </Typography>
+                  <Typography variant="body2">
+                    {product?.categories.length ? product.categories.join(", ") : labels.notAvailableLabel}
+                  </Typography>
+                </Stack>
+              </Grid>
             </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Stack spacing={0.6}>
-                <Typography variant="caption" color="text.secondary">
-                  {labels.productCodeLabel}
-                </Typography>
-                <Typography variant="body2">{product?.productCode ?? labels.notAvailableLabel}</Typography>
-              </Stack>
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Stack spacing={0.6}>
-                <Typography variant="caption" color="text.secondary">
-                  {labels.availabilityLabel}
-                </Typography>
-                <Typography variant="body2">
-                  {formatAvailabilityDate(product?.availabilityDate, labels.notAvailableLabel)}
-                </Typography>
-              </Stack>
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Stack spacing={0.6}>
-                <Typography variant="caption" color="text.secondary">
-                  {labels.categoryLabel}
-                </Typography>
-                <Typography variant="body2">
-                  {product?.categories.length ? product.categories.join(", ") : labels.notAvailableLabel}
-                </Typography>
-              </Stack>
-            </Grid>
-          </Grid>
+          </Stack>
 
           <Stack spacing={1.5} sx={{ borderTop: "1px solid", borderColor: "divider", pt: 2 }}>
             <Typography variant="subtitle1">{labels.sellingModelsTitle}</Typography>

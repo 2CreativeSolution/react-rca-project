@@ -4,8 +4,10 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   Chip,
   Divider,
+  FormControlLabel,
   Grid,
   Paper,
   Stack,
@@ -13,41 +15,67 @@ import {
   Typography,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
+import { MuiTelInput, type MuiTelInputInfo } from "mui-tel-input";
 import { useMemo, useState } from "react";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
+import { formatCurrency } from "../components/cart/formatters";
 import { PRODUCT_COPY } from "../constants/productContent";
 import { ROUTES } from "../constants/routes";
 import { useNotification } from "../context/useNotification";
 import {
   createOrdersFromQuote,
-  type CheckoutBillingDetails,
   type CartLineItem,
   type CartTotals,
+  type CheckoutAddressDetails,
+  type CheckoutBillingDetails,
   type CreateOrderFromQuoteFuturePayload,
   type CreateOrderFromQuotePayload,
   type TotalsComputationMeta,
 } from "../services/salesforceApi";
-import { formatCurrency } from "../components/cart/formatters";
 
 type CheckoutRouteState = {
   quoteId: string;
+  quoteName?: string | null;
   lineItems: CartLineItem[];
   totals: CartTotals;
   totalsComputation: TotalsComputationMeta;
 };
 
-type BillingFormState = CheckoutBillingDetails;
+type ContactFormState = {
+  fullName: string;
+  email: string;
+  phoneValue: string;
+  phoneCountryCode: string;
+  phoneNumber: string;
+};
 
-const INITIAL_BILLING_FORM_STATE: BillingFormState = {
-  fullName: "",
-  email: "",
-  phone: "",
+type BillingFormState = {
+  contact: ContactFormState;
+  billingAddress: CheckoutAddressDetails;
+  shippingAddress: CheckoutAddressDetails;
+  useBillingAsShipping: boolean;
+};
+
+const INITIAL_ADDRESS_STATE: CheckoutAddressDetails = {
   addressLine1: "",
   addressLine2: "",
   city: "",
   state: "",
   postalCode: "",
   country: "",
+};
+
+const INITIAL_BILLING_FORM_STATE: BillingFormState = {
+  contact: {
+    fullName: "",
+    email: "",
+    phoneValue: "+1",
+    phoneCountryCode: "+1",
+    phoneNumber: "",
+  },
+  billingAddress: INITIAL_ADDRESS_STATE,
+  shippingAddress: INITIAL_ADDRESS_STATE,
+  useBillingAsShipping: true,
 };
 
 function isValidEmail(value: string): boolean {
@@ -61,6 +89,109 @@ function toCreateOrderFromQuotePayload(payload: CreateOrderFromQuoteFuturePayloa
   };
 }
 
+function validateAddress(
+  address: CheckoutAddressDetails,
+  sectionTitle: string,
+  checkoutCopy: typeof PRODUCT_COPY.checkout
+): string | null {
+  if (!address.addressLine1.trim()) {
+    return `${sectionTitle}: ${checkoutCopy.addressRequiredMessage}`;
+  }
+  if (!address.city.trim()) {
+    return `${sectionTitle}: ${checkoutCopy.cityRequiredMessage}`;
+  }
+  if (!address.state.trim()) {
+    return `${sectionTitle}: ${checkoutCopy.stateRequiredMessage}`;
+  }
+  if (!address.postalCode.trim()) {
+    return `${sectionTitle}: ${checkoutCopy.postalCodeRequiredMessage}`;
+  }
+  if (!address.country.trim()) {
+    return `${sectionTitle}: ${checkoutCopy.countryRequiredMessage}`;
+  }
+
+  return null;
+}
+
+type AddressFieldsProps = {
+  address: CheckoutAddressDetails;
+  disabled?: boolean;
+  onAddressChange: (field: keyof CheckoutAddressDetails, value: string) => void;
+  checkoutCopy: typeof PRODUCT_COPY.checkout;
+};
+
+function AddressFields({ address, disabled, onAddressChange, checkoutCopy }: AddressFieldsProps) {
+  return (
+    <Grid container spacing={1.25}>
+      <Grid size={{ xs: 12 }}>
+        <TextField
+          label={checkoutCopy.addressLine1Label}
+          value={address.addressLine1}
+          onChange={(event) => onAddressChange("addressLine1", event.target.value)}
+          required
+          size="small"
+          fullWidth
+          disabled={disabled}
+        />
+      </Grid>
+      <Grid size={{ xs: 12 }}>
+        <TextField
+          label={checkoutCopy.addressLine2Label}
+          value={address.addressLine2}
+          onChange={(event) => onAddressChange("addressLine2", event.target.value)}
+          size="small"
+          fullWidth
+          disabled={disabled}
+        />
+      </Grid>
+      <Grid size={{ xs: 12, md: 5 }}>
+        <TextField
+          label={checkoutCopy.cityLabel}
+          value={address.city}
+          onChange={(event) => onAddressChange("city", event.target.value)}
+          required
+          size="small"
+          fullWidth
+          disabled={disabled}
+        />
+      </Grid>
+      <Grid size={{ xs: 12, md: 3 }}>
+        <TextField
+          label={checkoutCopy.stateLabel}
+          value={address.state}
+          onChange={(event) => onAddressChange("state", event.target.value)}
+          required
+          size="small"
+          fullWidth
+          disabled={disabled}
+        />
+      </Grid>
+      <Grid size={{ xs: 12, md: 4 }}>
+        <TextField
+          label={checkoutCopy.postalCodeLabel}
+          value={address.postalCode}
+          onChange={(event) => onAddressChange("postalCode", event.target.value)}
+          required
+          size="small"
+          fullWidth
+          disabled={disabled}
+        />
+      </Grid>
+      <Grid size={{ xs: 12 }}>
+        <TextField
+          label={checkoutCopy.countryLabel}
+          value={address.country}
+          onChange={(event) => onAddressChange("country", event.target.value)}
+          required
+          size="small"
+          fullWidth
+          disabled={disabled}
+        />
+      </Grid>
+    </Grid>
+  );
+}
+
 export default function Checkout() {
   const checkoutCopy = PRODUCT_COPY.checkout;
   const { notifyError, notifySuccess, notifyWarning } = useNotification();
@@ -71,14 +202,22 @@ export default function Checkout() {
 
   const state = location.state as CheckoutRouteState | null;
   const hasCheckoutState = Boolean(state?.quoteId && state?.lineItems && state?.totals && state?.totalsComputation);
+
   const orderPayload = useMemo<CreateOrderFromQuoteFuturePayload | null>(() => {
     if (!state) {
       return null;
     }
 
+    const shippingAddress = billingForm.useBillingAsShipping ? billingForm.billingAddress : billingForm.shippingAddress;
+    const payloadBilling: CheckoutBillingDetails = {
+      contact: billingForm.contact,
+      billingAddress: billingForm.billingAddress,
+      shippingAddress,
+    };
+
     return {
       quoteId: state.quoteId,
-      billing: billingForm,
+      billing: payloadBilling,
       lineItems: state.lineItems,
       totals: state.totals,
       totalsComputation: state.totalsComputation,
@@ -86,30 +225,31 @@ export default function Checkout() {
   }, [billingForm, state]);
 
   const formErrorMessage = useMemo(() => {
-    if (!billingForm.fullName.trim()) {
+    if (!billingForm.contact.fullName.trim()) {
       return checkoutCopy.fullNameRequiredMessage;
     }
-    if (!billingForm.email.trim() || !isValidEmail(billingForm.email)) {
+    if (!billingForm.contact.email.trim() || !isValidEmail(billingForm.contact.email)) {
       return checkoutCopy.validEmailRequiredMessage;
     }
-    if (!billingForm.phone.trim()) {
+    if (!billingForm.contact.phoneCountryCode.trim()) {
+      return checkoutCopy.countryCodeRequiredMessage;
+    }
+    if (!billingForm.contact.phoneNumber.trim()) {
       return checkoutCopy.phoneRequiredMessage;
     }
-    if (!billingForm.addressLine1.trim()) {
-      return checkoutCopy.addressRequiredMessage;
+
+    const billingAddressError = validateAddress(billingForm.billingAddress, checkoutCopy.billingTitle, checkoutCopy);
+    if (billingAddressError) {
+      return billingAddressError;
     }
-    if (!billingForm.city.trim()) {
-      return checkoutCopy.cityRequiredMessage;
+
+    if (!billingForm.useBillingAsShipping) {
+      const shippingAddressError = validateAddress(billingForm.shippingAddress, checkoutCopy.shippingTitle, checkoutCopy);
+      if (shippingAddressError) {
+        return shippingAddressError;
+      }
     }
-    if (!billingForm.state.trim()) {
-      return checkoutCopy.stateRequiredMessage;
-    }
-    if (!billingForm.postalCode.trim()) {
-      return checkoutCopy.postalCodeRequiredMessage;
-    }
-    if (!billingForm.country.trim()) {
-      return checkoutCopy.countryRequiredMessage;
-    }
+
     return null;
   }, [billingForm, checkoutCopy]);
 
@@ -131,10 +271,55 @@ export default function Checkout() {
     );
   }
 
-  const handleFieldChange = (field: keyof BillingFormState, value: string): void => {
+  const handleContactChange = (field: keyof ContactFormState, value: string): void => {
     setBillingForm((previous) => ({
       ...previous,
-      [field]: value,
+      contact: {
+        ...previous.contact,
+        [field]: value,
+      },
+    }));
+  };
+
+  const handlePhoneChange = (value: string, info: MuiTelInputInfo): void => {
+    setBillingForm((previous) => ({
+      ...previous,
+      contact: {
+        ...previous.contact,
+        phoneValue: value,
+        phoneCountryCode: info.countryCallingCode ? `+${info.countryCallingCode}` : "",
+        phoneNumber: info.nationalNumber ?? "",
+      },
+    }));
+  };
+
+  const handleAddressChange = (
+    section: "billingAddress" | "shippingAddress",
+    field: keyof CheckoutAddressDetails,
+    value: string
+  ): void => {
+    setBillingForm((previous) => ({
+      ...previous,
+      [section]: {
+        ...previous[section],
+        [field]: value,
+      },
+      ...(section === "billingAddress" && previous.useBillingAsShipping
+        ? {
+            shippingAddress: {
+              ...previous.shippingAddress,
+              [field]: value,
+            },
+          }
+        : {}),
+    }));
+  };
+
+  const handleUseBillingAsShipping = (checked: boolean): void => {
+    setBillingForm((previous) => ({
+      ...previous,
+      useBillingAsShipping: checked,
+      shippingAddress: checked ? previous.billingAddress : previous.shippingAddress,
     }));
   };
 
@@ -168,6 +353,8 @@ export default function Checkout() {
     await actualPlaceOrder(orderPayload);
   };
 
+  const quoteDisplayValue = state.quoteName?.trim() || state.quoteId || checkoutCopy.quoteFallbackLabel;
+
   return (
     <Stack spacing={2.5} sx={{ py: 1 }}>
       <Paper
@@ -198,7 +385,7 @@ export default function Checkout() {
               <Typography variant="h4">{checkoutCopy.title}</Typography>
             </Stack>
             <Typography color="text.secondary" variant="body2">
-              {`${checkoutCopy.quoteLabel}: ${state.quoteId}`}
+              {`${checkoutCopy.quoteLabel}: ${quoteDisplayValue}`}
             </Typography>
           </Stack>
           <Button component={RouterLink} to={ROUTES.cart} variant="outlined">
@@ -210,14 +397,14 @@ export default function Checkout() {
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, lg: 7 }}>
           <Paper variant="outlined" sx={{ borderRadius: 3, p: { xs: 2, md: 2.5 } }}>
-            <Stack spacing={1.6}>
-              <Typography variant="h6">{checkoutCopy.billingTitle}</Typography>
+            <Stack spacing={2}>
+              <Typography variant="h6">{checkoutCopy.contactTitle}</Typography>
               <Grid container spacing={1.25}>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <TextField
                     label={checkoutCopy.fullNameLabel}
-                    value={billingForm.fullName}
-                    onChange={(event) => handleFieldChange("fullName", event.target.value)}
+                    value={billingForm.contact.fullName}
+                    onChange={(event) => handleContactChange("fullName", event.target.value)}
                     required
                     size="small"
                     fullWidth
@@ -226,84 +413,57 @@ export default function Checkout() {
                 <Grid size={{ xs: 12, md: 6 }}>
                   <TextField
                     label={checkoutCopy.emailLabel}
-                    value={billingForm.email}
-                    onChange={(event) => handleFieldChange("email", event.target.value)}
+                    value={billingForm.contact.email}
+                    onChange={(event) => handleContactChange("email", event.target.value)}
                     required
                     size="small"
                     type="email"
                     fullWidth
                   />
                 </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField
+                <Grid size={{ xs: 12 }}>
+                  <MuiTelInput
                     label={checkoutCopy.phoneLabel}
-                    value={billingForm.phone}
-                    onChange={(event) => handleFieldChange("phone", event.target.value)}
+                    value={billingForm.contact.phoneValue}
+                    onChange={handlePhoneChange}
                     required
                     size="small"
                     fullWidth
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField
-                    label={checkoutCopy.countryLabel}
-                    value={billingForm.country}
-                    onChange={(event) => handleFieldChange("country", event.target.value)}
-                    required
-                    size="small"
-                    fullWidth
-                  />
-                </Grid>
-                <Grid size={{ xs: 12 }}>
-                  <TextField
-                    label={checkoutCopy.addressLine1Label}
-                    value={billingForm.addressLine1}
-                    onChange={(event) => handleFieldChange("addressLine1", event.target.value)}
-                    required
-                    size="small"
-                    fullWidth
-                  />
-                </Grid>
-                <Grid size={{ xs: 12 }}>
-                  <TextField
-                    label={checkoutCopy.addressLine2Label}
-                    value={billingForm.addressLine2}
-                    onChange={(event) => handleFieldChange("addressLine2", event.target.value)}
-                    size="small"
-                    fullWidth
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, md: 5 }}>
-                  <TextField
-                    label={checkoutCopy.cityLabel}
-                    value={billingForm.city}
-                    onChange={(event) => handleFieldChange("city", event.target.value)}
-                    required
-                    size="small"
-                    fullWidth
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, md: 3 }}>
-                  <TextField
-                    label={checkoutCopy.stateLabel}
-                    value={billingForm.state}
-                    onChange={(event) => handleFieldChange("state", event.target.value)}
-                    required
-                    size="small"
-                    fullWidth
-                  />
-                </Grid>
-                <Grid size={{ xs: 12, md: 4 }}>
-                  <TextField
-                    label={checkoutCopy.postalCodeLabel}
-                    value={billingForm.postalCode}
-                    onChange={(event) => handleFieldChange("postalCode", event.target.value)}
-                    required
-                    size="small"
-                    fullWidth
+                    forceCallingCode
+                    defaultCountry="US"
                   />
                 </Grid>
               </Grid>
+
+              <Divider />
+
+              <Typography variant="h6">{checkoutCopy.billingTitle}</Typography>
+              <AddressFields
+                address={billingForm.billingAddress}
+                checkoutCopy={checkoutCopy}
+                onAddressChange={(field, value) => handleAddressChange("billingAddress", field, value)}
+              />
+
+              <Divider />
+
+              <Stack spacing={0.5}>
+                <Typography variant="h6">{checkoutCopy.shippingTitle}</Typography>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={billingForm.useBillingAsShipping}
+                      onChange={(event) => handleUseBillingAsShipping(event.target.checked)}
+                    />
+                  }
+                  label={checkoutCopy.sameAsBillingLabel}
+                />
+              </Stack>
+              <AddressFields
+                address={billingForm.useBillingAsShipping ? billingForm.billingAddress : billingForm.shippingAddress}
+                checkoutCopy={checkoutCopy}
+                disabled={billingForm.useBillingAsShipping}
+                onAddressChange={(field, value) => handleAddressChange("shippingAddress", field, value)}
+              />
             </Stack>
           </Paper>
         </Grid>

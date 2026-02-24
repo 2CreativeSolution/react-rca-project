@@ -1,6 +1,7 @@
 import { Box, Button, Stack } from "@mui/material";
 import { useMemo, useState, type FormEvent } from "react";
 import { Link as RouterLink, Navigate, useNavigate } from "react-router-dom";
+import AuthProgressStatus from "../components/ui/AuthProgressStatus";
 import AuthShell from "../components/ui/AuthShell";
 import AuthTextField from "../components/ui/AuthTextField";
 import { AUTH_COPY } from "../constants/authContent";
@@ -8,6 +9,13 @@ import { ROUTES } from "../constants/routes";
 import { useAuth } from "../context/useAuth";
 import { useNotification } from "../context/useNotification";
 import { evaluateDecision } from "../services/salesforceApi";
+
+type SignupProgressStep =
+  | "creatingAccount"
+  | "syncingIdentity"
+  | "creatingDefaultQuote"
+  | "evaluatingDecision"
+  | "finalizing";
 
 function isEmailValid(email: string) {
   return /\S+@\S+\.\S+/.test(email);
@@ -31,6 +39,8 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [progressStep, setProgressStep] = useState<SignupProgressStep>("creatingAccount");
+  const progressLabel = useMemo(() => signupCopy.progress[progressStep], [progressStep, signupCopy.progress]);
 
   const validationError = useMemo(() => {
     if (!fullName.trim()) {
@@ -61,14 +71,17 @@ export default function Signup() {
     }
 
     setIsSubmitting(true);
+    setProgressStep("creatingAccount");
 
     try {
+      setProgressStep("creatingAccount");
       const signupResult = await signupWithCredentials(fullName.trim(), email.trim(), password);
 
       if (signupResult.profileUpdateFailed) {
         notifyWarning(signupCopy.profileWarningMessage);
       }
 
+      setProgressStep("syncingIdentity");
       const syncResult = await syncRcaIdentity();
       if (!syncResult.success) {
         notifyWarning(signupCopy.syncWarningMessage);
@@ -76,6 +89,7 @@ export default function Signup() {
       }
 
       if (syncResult.identity) {
+        setProgressStep("creatingDefaultQuote");
         const defaultQuoteResult = await initializeDefaultQuote(syncResult.identity);
         if (!defaultQuoteResult.success) {
           notifyWarning(signupCopy.defaultQuoteWarningMessage);
@@ -83,6 +97,7 @@ export default function Signup() {
       }
 
       try {
+        setProgressStep("evaluatingDecision");
         const decision = await evaluateDecision();
         setDecisionSession(decision);
       } catch {
@@ -90,6 +105,7 @@ export default function Signup() {
         notifyWarning(signupCopy.decisionWarningMessage);
       }
 
+      setProgressStep("finalizing");
       navigate(ROUTES.catalog, { replace: true });
     } catch (error) {
       notifyError(error instanceof Error ? error.message : signupCopy.fallbackErrorMessage);
@@ -122,6 +138,7 @@ export default function Signup() {
             name="fullName"
             autoComplete="name"
             value={fullName}
+            disabled={isSubmitting}
             onChange={(event) => setFullName(event.target.value)}
           />
           <AuthTextField
@@ -130,6 +147,7 @@ export default function Signup() {
             name="email"
             autoComplete="email"
             value={email}
+            disabled={isSubmitting}
             onChange={(event) => setEmail(event.target.value)}
           />
           <AuthTextField
@@ -138,6 +156,7 @@ export default function Signup() {
             name="password"
             autoComplete="new-password"
             value={password}
+            disabled={isSubmitting}
             onChange={(event) => setPassword(event.target.value)}
           />
           <AuthTextField
@@ -146,6 +165,7 @@ export default function Signup() {
             name="confirmPassword"
             autoComplete="new-password"
             value={confirmPassword}
+            disabled={isSubmitting}
             onChange={(event) => setConfirmPassword(event.target.value)}
           />
 
@@ -162,10 +182,12 @@ export default function Signup() {
           >
             {signupCopy.submitLabel}
           </Button>
+
+          {isSubmitting ? <AuthProgressStatus active label={progressLabel} /> : null}
         </Stack>
 
         <Box sx={{ display: "flex", justifyContent: "center", pt: 0.5 }}>
-          <Button component={RouterLink} to={ROUTES.login} size="small" color="inherit">
+          <Button component={RouterLink} to={ROUTES.login} size="small" color="inherit" disabled={isSubmitting}>
             {signupCopy.loginCta}
           </Button>
         </Box>

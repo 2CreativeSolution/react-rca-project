@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import CartLineList from "../components/cart/CartLineList";
 import CartSummary from "../components/cart/CartSummary";
+import { APP_EVENTS } from "../constants/appEvents";
 import { ROUTES } from "../constants/routes";
 import { PRODUCT_COPY } from "../constants/productContent";
 import { useAuth } from "../context/useAuth";
@@ -143,6 +144,7 @@ export default function Cart() {
         }
 
         notifySuccess(result.message ?? cartCopy.updateSuccessMessage);
+        window.dispatchEvent(new Event(APP_EVENTS.cartUpdated));
         await loadCart();
       } catch (error) {
         notifyError(error instanceof Error ? error.message : cartCopy.loadErrorMessage);
@@ -201,6 +203,7 @@ export default function Cart() {
         }
 
         notifySuccess(result.message ?? cartCopy.removeSuccessMessage);
+        window.dispatchEvent(new Event(APP_EVENTS.cartUpdated));
         await loadCart();
       } catch (error) {
         notifyError(error instanceof Error ? error.message : cartCopy.loadErrorMessage);

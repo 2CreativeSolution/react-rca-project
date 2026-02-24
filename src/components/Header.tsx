@@ -1,11 +1,62 @@
-import { AppBar, Box, Button, Container, Toolbar, Typography } from "@mui/material";
-import { Link as RouterLink } from "react-router-dom";
+import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
+import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
+import { AppBar, Badge, Box, Button, Container, IconButton, Toolbar, Typography } from "@mui/material";
+import { useEffect, useState } from "react";
+import { Link as RouterLink, useLocation } from "react-router-dom";
+import { APP_EVENTS } from "../constants/appEvents";
 import { ROUTES } from "../constants/routes";
 import { useAuth } from "../context/useAuth";
+import { getQuotesWithQuoteLines } from "../services/salesforceApi";
+import { getCartItemCount } from "../utils/cart";
 import logo from "../assets/logo.jpg";
 
 export default function Header() {
-  const { isLoggedIn } = useAuth();
+  const { decisionSession, isLoggedIn } = useAuth();
+  const location = useLocation();
+  const [cartItemCount, setCartItemCount] = useState(0);
+  const [cartRefreshTick, setCartRefreshTick] = useState(0);
+  const quoteId = decisionSession.quoteId?.trim() ?? "";
+  const visibleCartItemCount = isLoggedIn && quoteId ? cartItemCount : 0;
+
+  useEffect(() => {
+    const handleCartUpdated = () => {
+      setCartRefreshTick((previous) => previous + 1);
+    };
+
+    window.addEventListener(APP_EVENTS.cartUpdated, handleCartUpdated);
+    return () => {
+      window.removeEventListener(APP_EVENTS.cartUpdated, handleCartUpdated);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn || !quoteId) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadCartItemCount = async () => {
+      try {
+        const quote = await getQuotesWithQuoteLines({ quoteId });
+        if (!isMounted) {
+          return;
+        }
+        const summaryCount = getCartItemCount(quote.lineItems);
+        setCartItemCount(summaryCount);
+      } catch {
+        if (isMounted) {
+          setCartItemCount(0);
+        }
+      }
+    };
+
+    void loadCartItemCount();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [cartRefreshTick, isLoggedIn, quoteId, location.pathname]);
 
   return (
     <AppBar
@@ -89,17 +140,6 @@ export default function Header() {
             </Button>
             <Button
               component={RouterLink}
-              to={ROUTES.cart}
-              color="inherit"
-              sx={{
-                color: "text.secondary",
-                "&:hover": { bgcolor: "background.default" },
-              }}
-            >
-              Cart
-            </Button>
-            <Button
-              component={RouterLink}
               to={ROUTES.catalog}
               color="inherit"
               sx={{
@@ -109,17 +149,32 @@ export default function Header() {
             >
               Catalog
             </Button>
-            <Button
+            <IconButton
               component={RouterLink}
               to={ROUTES.settings}
               color="inherit"
+              aria-label="Settings"
               sx={{
                 color: "text.secondary",
                 "&:hover": { bgcolor: "background.default" },
               }}
             >
-              Settings
-            </Button>
+              <SettingsOutlinedIcon fontSize="small" />
+            </IconButton>
+            <IconButton
+              component={RouterLink}
+              to={ROUTES.cart}
+              color="inherit"
+              aria-label="Cart"
+              sx={{
+                color: "text.secondary",
+                "&:hover": { bgcolor: "background.default" },
+              }}
+            >
+              <Badge badgeContent={visibleCartItemCount} color="error" max={99} invisible={visibleCartItemCount <= 0}>
+                <ShoppingCartOutlinedIcon fontSize="small" />
+              </Badge>
+            </IconButton>
 
             {isLoggedIn ? (
               <Button component={RouterLink} to={ROUTES.logout} variant="outlined" color="primary">

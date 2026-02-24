@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
-import Navbar from "../components/Navbar";
+import { Box, Container } from "@mui/material";
+import Footer from "../components/Footer";
+import Header from "../components/Header";
 
 type Props = {
   children: ReactNode;
@@ -7,16 +9,14 @@ type Props = {
 
 export default function MainLayout({ children }: Props) {
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
+    <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+      <Header />
 
-      <main className="flex-1 p-6">
-        {children}
-      </main>
+      <Box component="main" sx={{ flex: 1 }}>
+        <Container sx={{ py: 4 }}>{children}</Container>
+      </Box>
 
-      <footer className="bg-gray-100 text-center p-4 text-sm">
-        © 2026 My App
-      </footer>
-    </div>
+      <Footer />
+    </Box>
   );
 }

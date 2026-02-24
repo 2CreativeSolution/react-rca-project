@@ -1,45 +1,63 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ROUTES } from "./constants/routes";
 import { AuthProvider } from "./context/AuthProvider";
+import { NotificationProvider } from "./context/NotificationProvider";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import MainLayout from "./layout/MainLayout";
 
 /* Public pages */
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
+import Logout from "./pages/Logout";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Contact from "./pages/Contact";
+import Legal from "./pages/Legal";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 
 /* Private pages */
 import Dashboard from "./pages/Dashboard";
+import Catalog from "./pages/Catalog";
 import ProductLanding from "./pages/ProductLanding";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
+import OrderStatus from "./pages/OrderStatus";
 import UserSettings from "./pages/UserSettings";
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <MainLayout>
-          <Routes>
+    <NotificationProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <MainLayout>
+            <Routes>
             {/* ================= PUBLIC ROUTES ================= */}
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/privacy" element={<Privacy />} />
+            <Route path={ROUTES.home} element={<Landing />} />
+            <Route path={ROUTES.login} element={<Login />} />
+            <Route path={ROUTES.logout} element={<Logout />} />
+            <Route path={ROUTES.signup} element={<Signup />} />
+            <Route path={ROUTES.forgotPassword} element={<ForgotPassword />} />
+            <Route path={ROUTES.resetPassword} element={<ResetPassword />} />
+            <Route path={ROUTES.contact} element={<Contact />} />
+            <Route path={ROUTES.legal} element={<Legal />} />
+            <Route path={ROUTES.terms} element={<Terms />} />
+            <Route path={ROUTES.privacy} element={<Privacy />} />
 
             {/* ================= PROTECTED ROUTES ================= */}
             <Route
-              path="/dashboard"
+              path={ROUTES.catalog}
+              element={
+                <ProtectedRoute>
+                  <Catalog />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path={ROUTES.dashboard}
               element={
                 <ProtectedRoute>
                   <Dashboard />
@@ -48,7 +66,7 @@ function App() {
             />
 
             <Route
-              path="/products"
+              path={ROUTES.products}
               element={
                 <ProtectedRoute>
                   <ProductLanding />
@@ -57,7 +75,7 @@ function App() {
             />
 
             <Route
-              path="/products/:id"
+              path={ROUTES.productDetail}
               element={
                 <ProtectedRoute>
                   <ProductDetail />
@@ -66,7 +84,7 @@ function App() {
             />
 
             <Route
-              path="/cart"
+              path={ROUTES.cart}
               element={
                 <ProtectedRoute>
                   <Cart />
@@ -75,7 +93,7 @@ function App() {
             />
 
             <Route
-              path="/checkout"
+              path={ROUTES.checkout}
               element={
                 <ProtectedRoute>
                   <Checkout />
@@ -84,17 +102,27 @@ function App() {
             />
 
             <Route
-              path="/settings"
+              path={ROUTES.orderStatus}
+              element={
+                <ProtectedRoute>
+                  <OrderStatus />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path={ROUTES.settings}
               element={
                 <ProtectedRoute>
                   <UserSettings />
                 </ProtectedRoute>
               }
             />
-          </Routes>
-        </MainLayout>
-      </BrowserRouter>
-    </AuthProvider>
+            </Routes>
+          </MainLayout>
+        </BrowserRouter>
+      </AuthProvider>
+    </NotificationProvider>
   );
 }
 

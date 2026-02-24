@@ -87,7 +87,7 @@ export default function OrderStatus() {
 
         if (result.status === "Completed") {
           notifySuccess(result.message ?? orderStatusCopy.completedMessage);
-          navigate(ROUTES.cart, { replace: true });
+          navigate(ROUTES.dashboard, { replace: true });
           return;
         }
 

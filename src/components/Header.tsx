@@ -1,7 +1,21 @@
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
+import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
-import { AppBar, Badge, Box, Button, Container, IconButton, Toolbar, Typography } from "@mui/material";
-import { useEffect, useState } from "react";
+import {
+  AppBar,
+  Avatar,
+  Badge,
+  Box,
+  Button,
+  Container,
+  IconButton,
+  ListItemIcon,
+  Menu,
+  MenuItem,
+  Toolbar,
+  Typography,
+} from "@mui/material";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 import { APP_EVENTS } from "../constants/appEvents";
 import { ROUTES } from "../constants/routes";
@@ -11,12 +25,25 @@ import { getCartItemCount } from "../utils/cart";
 import logo from "../assets/logo.jpg";
 
 export default function Header() {
-  const { decisionSession, isLoggedIn } = useAuth();
+  const { currentUser, decisionSession, isLoggedIn, profilePhotoUrl } = useAuth();
   const location = useLocation();
   const [cartItemCount, setCartItemCount] = useState(0);
   const [cartRefreshTick, setCartRefreshTick] = useState(0);
+  const [accountMenuAnchor, setAccountMenuAnchor] = useState<null | HTMLElement>(null);
   const quoteId = decisionSession.quoteId?.trim() ?? "";
   const visibleCartItemCount = isLoggedIn && quoteId ? cartItemCount : 0;
+  const isAccountMenuOpen = Boolean(accountMenuAnchor);
+  const accountInitials = useMemo(() => {
+    const fullName = currentUser?.displayName?.trim();
+    if (fullName) {
+      const parts = fullName.split(/\s+/).filter(Boolean);
+      const initials = `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`;
+      return initials.toUpperCase();
+    }
+
+    const email = currentUser?.email?.trim();
+    return email?.[0]?.toUpperCase() ?? "U";
+  }, [currentUser?.displayName, currentUser?.email]);
 
   useEffect(() => {
     const handleCartUpdated = () => {
@@ -57,6 +84,14 @@ export default function Header() {
       isMounted = false;
     };
   }, [cartRefreshTick, isLoggedIn, quoteId, location.pathname]);
+
+  const openAccountMenu = (event: MouseEvent<HTMLElement>) => {
+    setAccountMenuAnchor(event.currentTarget);
+  };
+
+  const closeAccountMenu = () => {
+    setAccountMenuAnchor(null);
+  };
 
   return (
     <AppBar
@@ -151,18 +186,6 @@ export default function Header() {
             </Button>
             <IconButton
               component={RouterLink}
-              to={ROUTES.settings}
-              color="inherit"
-              aria-label="Settings"
-              sx={{
-                color: "text.secondary",
-                "&:hover": { bgcolor: "background.default" },
-              }}
-            >
-              <SettingsOutlinedIcon fontSize="small" />
-            </IconButton>
-            <IconButton
-              component={RouterLink}
               to={ROUTES.cart}
               color="inherit"
               aria-label="Cart"
@@ -177,9 +200,45 @@ export default function Header() {
             </IconButton>
 
             {isLoggedIn ? (
-              <Button component={RouterLink} to={ROUTES.logout} variant="outlined" color="primary">
-                Logout
-              </Button>
+              <>
+                <IconButton
+                  color="inherit"
+                  aria-label="Account menu"
+                  aria-controls={isAccountMenuOpen ? "account-menu" : undefined}
+                  aria-haspopup="true"
+                  aria-expanded={isAccountMenuOpen ? "true" : undefined}
+                  onClick={openAccountMenu}
+                  sx={{
+                    color: "text.secondary",
+                    "&:hover": { bgcolor: "background.default" },
+                  }}
+                >
+                  <Avatar alt={currentUser?.displayName ?? currentUser?.email ?? "User"} src={profilePhotoUrl ?? undefined}>
+                    {accountInitials}
+                  </Avatar>
+                </IconButton>
+                <Menu
+                  id="account-menu"
+                  anchorEl={accountMenuAnchor}
+                  open={isAccountMenuOpen}
+                  onClose={closeAccountMenu}
+                  transformOrigin={{ horizontal: "right", vertical: "top" }}
+                  anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+                >
+                  <MenuItem component={RouterLink} to={ROUTES.settings} onClick={closeAccountMenu}>
+                    <ListItemIcon>
+                      <SettingsOutlinedIcon fontSize="small" />
+                    </ListItemIcon>
+                    Settings
+                  </MenuItem>
+                  <MenuItem component={RouterLink} to={ROUTES.logout} onClick={closeAccountMenu}>
+                    <ListItemIcon>
+                      <LogoutOutlinedIcon fontSize="small" />
+                    </ListItemIcon>
+                    Logout
+                  </MenuItem>
+                </Menu>
+              </>
             ) : (
               <Button component={RouterLink} to={ROUTES.login} variant="contained">
                 Login

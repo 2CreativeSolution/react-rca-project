@@ -65,6 +65,7 @@ export default function Cart() {
       const normalizedQuote = {
         ...quote,
         quoteId: quote.quoteId || quoteId,
+        quoteName: quote.quoteName?.trim() ? quote.quoteName : null,
       };
       setCartQuote(normalizedQuote);
       initializeDrafts(normalizedQuote.lineItems);
@@ -94,6 +95,9 @@ export default function Cart() {
     async (line: CartLineItem) => {
       if (!quoteId) {
         notifyWarning(cartCopy.missingQuoteWarning);
+        return;
+      }
+      if (line.isChild) {
         return;
       }
 
@@ -168,6 +172,9 @@ export default function Cart() {
         notifyWarning(cartCopy.missingQuoteWarning);
         return;
       }
+      if (line.isChild) {
+        return;
+      }
 
       if (!line.quoteLineItemId) {
         notifyWarning(cartCopy.missingLineIdWarning);
@@ -228,6 +235,7 @@ export default function Cart() {
     navigate(ROUTES.checkout, {
       state: {
         quoteId,
+        quoteName: cartQuote.quoteName ?? quoteId,
         lineItems: cartQuote.lineItems,
         totals: cartQuote.totals,
         totalsComputation: cartQuote.totalsComputation,
@@ -238,6 +246,7 @@ export default function Cart() {
   const isMissingQuote = !quoteId;
   const lineItems = cartQuote?.lineItems ?? [];
   const hasItems = lineItems.length > 0;
+  const quoteChipValue = cartQuote?.quoteName?.trim() || quoteId;
 
   const summary = useMemo(() => {
     if (!cartQuote) {
@@ -254,7 +263,7 @@ export default function Cart() {
     <Stack spacing={2.5} sx={{ py: 1 }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between">
         <Typography variant="h4">{cartCopy.title}</Typography>
-        {quoteId ? <Chip color="primary" label={`Quote: ${quoteId}`} variant="outlined" /> : null}
+        {quoteId ? <Chip color="primary" label={`${cartCopy.quoteLabel}: ${quoteChipValue}`} variant="outlined" /> : null}
       </Stack>
 
       {isMissingQuote ? (

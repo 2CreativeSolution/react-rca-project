@@ -1,19 +1,25 @@
 import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
-import { CircularProgress, FormControl, InputLabel, MenuItem, Paper, Select, Stack, Typography } from "@mui/material";
+import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
+import { Button, CircularProgress, FormControl, InputLabel, MenuItem, Paper, Select, Stack, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import FilterToolbar from "../components/filters/FilterToolbar";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import ProductDetailsDialog from "../components/product/ProductDetailsDialog";
 import ProductList from "../components/product/ProductList";
 import { catalogGlassSurfaceSx } from "../components/catalog/styles";
 import { PRODUCT_COPY } from "../constants/productContent";
+import { ROUTES } from "../constants/routes";
 import { useAuth } from "../context/useAuth";
 import { useNotification } from "../context/useNotification";
 import { getCatalogOptions, type CatalogOption } from "../services/catalog/catalogService";
-import { addProductsToCart, listProducts, type ProductSummary } from "../services/salesforceApi";
+import { addProductsToCart, getProductDetails, listProducts, type ProductDetails, type ProductSummary } from "../services/salesforceApi";
 
 const UNCATEGORIZED_FILTER_VALUE = "__filter_uncategorized__";
+
+type ProductLandingRouteState = {
+  fromCatalog?: boolean;
+};
 
 export default function ProductLanding() {
   const productLandingCopy = PRODUCT_COPY.landing;
@@ -22,15 +28,22 @@ export default function ProductLanding() {
   const [products, setProducts] = useState<ProductSummary[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedProduct, setSelectedProduct] = useState<ProductSummary | null>(null);
+  const [selectedProductSummary, setSelectedProductSummary] = useState<ProductSummary | null>(null);
+  const [selectedProductDetails, setSelectedProductDetails] = useState<ProductDetails | null>(null);
+  const [isProductDetailsLoading, setIsProductDetailsLoading] = useState(false);
+  const [productDetailsError, setProductDetailsError] = useState<string | null>(null);
   const [addToCartProductId, setAddToCartProductId] = useState<string | null>(null);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
   const [isProductsLoading, setIsProductsLoading] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const selectedCatalogParam = searchParams.get("catalogId")?.trim() ?? "";
   const initialCatalogParamRef = useRef(selectedCatalogParam);
+  const productDetailsRequestIdRef = useRef(0);
   const { decisionSession } = useAuth();
   const { notifyError, notifySuccess, notifyWarning } = useNotification();
+  const showCatalogBackButton = (location.state as ProductLandingRouteState | null)?.fromCatalog === true;
 
   const loadCatalogOptions = useCallback(async () => {
     setIsCatalogLoading(true);
@@ -95,7 +108,11 @@ export default function ProductLanding() {
 
     let isCurrentSelection = true;
     setIsProductsLoading(true);
-    setSelectedProduct(null);
+    setSelectedProductSummary(null);
+    setSelectedProductDetails(null);
+    setProductDetailsError(null);
+    setIsProductDetailsLoading(false);
+    productDetailsRequestIdRef.current += 1;
 
     void (async () => {
       try {
@@ -391,6 +408,72 @@ export default function ProductLanding() {
     }
   }, [categoryFilterOptions, selectedCategory]);
 
+  const handleBackToCatalog = useCallback(() => {
+    const nextSearchParams = new URLSearchParams();
+    const resolvedCatalogId = selectedCatalogId || selectedCatalogParam;
+    if (resolvedCatalogId) {
+      nextSearchParams.set("catalogId", resolvedCatalogId);
+    }
+
+    navigate({
+      pathname: ROUTES.catalog,
+      search: nextSearchParams.toString() ? `?${nextSearchParams.toString()}` : "",
+    });
+  }, [navigate, selectedCatalogId, selectedCatalogParam]);
+
+  const handleCloseProductDetails = useCallback(() => {
+    productDetailsRequestIdRef.current += 1;
+    setSelectedProductSummary(null);
+    setSelectedProductDetails(null);
+    setIsProductDetailsLoading(false);
+    setProductDetailsError(null);
+  }, []);
+
+  const handleSelectProduct = useCallback(
+    (product: ProductSummary) => {
+      setSelectedProductSummary(product);
+      setSelectedProductDetails(null);
+      setProductDetailsError(null);
+
+      const productId = product.id?.trim();
+      if (!productId) {
+        // TODO: Invalidate any in-flight product-details request here before returning
+        // to avoid stale responses updating dialog state after a no-id selection.
+        setIsProductDetailsLoading(false);
+        setProductDetailsError(productLandingCopy.productDetailsUnavailableMessage);
+        return;
+      }
+
+      const requestId = productDetailsRequestIdRef.current + 1;
+      productDetailsRequestIdRef.current = requestId;
+      setIsProductDetailsLoading(true);
+
+      void (async () => {
+        try {
+          const details = await getProductDetails({ productId });
+          if (productDetailsRequestIdRef.current !== requestId) {
+            return;
+          }
+          setSelectedProductDetails(details);
+        } catch (error) {
+          if (productDetailsRequestIdRef.current !== requestId) {
+            return;
+          }
+          const message =
+            error instanceof Error && error.message.trim().length > 0
+              ? error.message
+              : productLandingCopy.productDetailsLoadErrorMessage;
+          setProductDetailsError(message);
+        } finally {
+          if (productDetailsRequestIdRef.current === requestId) {
+            setIsProductDetailsLoading(false);
+          }
+        }
+      })();
+    },
+    [productLandingCopy.productDetailsLoadErrorMessage, productLandingCopy.productDetailsUnavailableMessage]
+  );
+
   if (isCatalogLoading) {
     return (
       <Stack alignItems="center" justifyContent="center" spacing={1.5} sx={{ py: 10 }}>
@@ -406,12 +489,24 @@ export default function ProductLanding() {
     <Stack spacing={2.5} sx={{ py: 1 }}>
       <Stack
         direction="row"
-        alignItems="center"
+        alignItems="flex-start"
         justifyContent="space-between"
         spacing={1.5}
         sx={{ flexWrap: "wrap" }}
       >
-        <Typography variant="h4">{productLandingCopy.title}</Typography>
+        <Stack spacing={0.8} alignItems="flex-start">
+          {showCatalogBackButton ? (
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<ArrowBackRoundedIcon fontSize="small" />}
+              onClick={handleBackToCatalog}
+            >
+              {productLandingCopy.backToCatalogLabel}
+            </Button>
+          ) : null}
+          <Typography variant="h4">{productLandingCopy.title}</Typography>
+        </Stack>
         <Stack
           direction="row"
           alignItems="center"
@@ -513,7 +608,7 @@ export default function ProductLanding() {
           priceLabel: productLandingCopy.priceLabel,
         }}
         onAddToCart={handleAddToCart}
-        onSelectProduct={setSelectedProduct}
+        onSelectProduct={handleSelectProduct}
         products={filteredProducts}
       />
 
@@ -523,24 +618,35 @@ export default function ProductLanding() {
           autoRenewLabel: productLandingCopy.autoRenewLabel,
           availabilityLabel: productLandingCopy.availabilityLabel,
           categoryLabel: productLandingCopy.categoryLabel,
+          defaultValueLabel: productLandingCopy.defaultValueLabel,
           closeDetailsAriaLabel: productLandingCopy.closeDetailsAriaLabel,
           defaultOptionLabel: productLandingCopy.defaultOptionLabel,
           detailsTitleFallback: productLandingCopy.detailsTitleFallback,
+          descriptionTitle: productLandingCopy.descriptionTitle,
+          descriptionUnavailableLabel: productLandingCopy.descriptionUnavailableLabel,
+          imageGalleryTitle: productLandingCopy.imageGalleryTitle,
+          imageThumbnailAriaLabel: productLandingCopy.imageThumbnailAriaLabel,
           inactiveLabel: productLandingCopy.inactiveLabel,
           modelStatusLabel: productLandingCopy.modelStatusLabel,
           modelTypeLabel: productLandingCopy.modelTypeLabel,
+          noAttributesMessage: productLandingCopy.noAttributesMessage,
           noLabel: productLandingCopy.noLabel,
           notAvailableLabel: productLandingCopy.notAvailableLabel,
           noSellingModelMessage: productLandingCopy.noSellingModelMessage,
+          attributesTitle: productLandingCopy.attributesTitle,
+          attributeLabelLabel: productLandingCopy.attributeLabelLabel,
+          nodeTypeLabel: productLandingCopy.nodeTypeLabel,
           pricingTermLabel: productLandingCopy.pricingTermLabel,
           pricingTermUnitLabel: productLandingCopy.pricingTermUnitLabel,
-          productCodeLabel: productLandingCopy.productCodeLabel,
-          productIdLabel: productLandingCopy.productIdLabel,
           sellingModelsTitle: productLandingCopy.sellingModelsTitle,
+          statusLabel: productLandingCopy.statusLabel,
           yesLabel: productLandingCopy.yesLabel,
         }}
-        onClose={() => setSelectedProduct(null)}
-        product={selectedProduct}
+        errorMessage={productDetailsError}
+        isLoading={isProductDetailsLoading}
+        onClose={handleCloseProductDetails}
+        productDetails={selectedProductDetails}
+        productSummary={selectedProductSummary}
       />
     </Stack>
   );

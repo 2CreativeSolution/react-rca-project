@@ -15,5 +15,6 @@ export const ROUTES = {
   productDetail: "/products/:id",
   cart: "/cart",
   checkout: "/checkout",
+  orderStatus: "/order-status",
   settings: "/settings",
 } as const;

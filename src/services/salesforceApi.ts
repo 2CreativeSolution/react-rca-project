@@ -49,6 +49,29 @@ export type ProductSummary = {
   productSellingModelOptions: ProductSellingModelOptionSummary[];
 };
 
+export type GetProductDetailsPayload = {
+  productId: string;
+};
+
+export type ProductDetailsAttribute = {
+  code?: string;
+  label?: string;
+  defaultValue?: string;
+  status?: string;
+};
+
+export type ProductDetailsAttributeCategory = {
+  id?: string;
+  code?: string;
+  name?: string;
+  attributes: ProductDetailsAttribute[];
+};
+
+export type ProductDetails = ProductSummary & {
+  imageUrls: string[];
+  attributeCategories: ProductDetailsAttributeCategory[];
+};
+
 export type ProductPricebookEntry = {
   id?: string;
   product2Id?: string;
@@ -111,20 +134,66 @@ export type RemoveProductsFromCartPayload = {
   }>;
 };
 
+export type CreateOrderAddressData = {
+  billingToName: string;
+  billingStreet: string;
+  billingCity: string;
+  billingState: string;
+  billingPostalCode: string;
+  billingCountry: string;
+  shippingToName: string;
+  shippingStreet: string;
+  shippingCity: string;
+  shippingState: string;
+  shippingPostalCode: string;
+  shippingCountry: string;
+  email: string;
+  phone: string;
+};
+
 export type CreateOrderFromQuotePayload = {
+  quoteId: string;
+  addressData: CreateOrderAddressData;
+};
+
+export type CreateOrderFromQuoteResult = {
+  success: boolean;
+  queued: boolean;
+  jobId: string | null;
+  message: string | null;
+};
+
+export type GetOrderStatusPayload = {
   quoteId: string;
 };
 
-export type CheckoutBillingDetails = {
-  fullName: string;
-  email: string;
-  phone: string;
+export type OrderProcessingStatus = "Processing" | "Completed" | "Failed" | "Unknown";
+
+export type GetOrderStatusResult = {
+  status: OrderProcessingStatus;
+  message: string | null;
+};
+
+export type CheckoutAddressDetails = {
   addressLine1: string;
   addressLine2: string;
   city: string;
   state: string;
   postalCode: string;
   country: string;
+};
+
+export type CheckoutContactDetails = {
+  fullName: string;
+  email: string;
+  phoneCountryCode: string;
+  phoneNumber: string;
+};
+
+export type CheckoutBillingDetails = {
+  contact: CheckoutContactDetails;
+  billingAddress: CheckoutAddressDetails;
+  shippingAddress: CheckoutAddressDetails;
 };
 
 export type CartLineItem = {
@@ -137,6 +206,9 @@ export type CartLineItem = {
   lineTotal: number | null;
   billingFrequency: string | null;
   periodBoundary: string | null;
+  isChild: boolean;
+  parentQuoteLineItemId: string | null;
+  depth: number;
 };
 
 export type CartTotals = {
@@ -159,6 +231,7 @@ export type CreateOrderFromQuoteFuturePayload = {
 
 export type CartQuote = {
   quoteId: string;
+  quoteName: string | null;
   quoteStatus: string | null;
   lineItems: CartLineItem[];
   totals: CartTotals;
@@ -228,16 +301,6 @@ function findBooleanField(candidates: UnknownRecord[], key: string): boolean | n
   for (const candidate of candidates) {
     if (typeof candidate[key] === "boolean") {
       return candidate[key] as boolean;
-    }
-  }
-  return null;
-}
-
-function findNumberField(candidates: UnknownRecord[], key: string): number | null {
-  for (const candidate of candidates) {
-    const value = asNumberLike(candidate[key]);
-    if (value !== null) {
-      return value;
     }
   }
   return null;
@@ -383,6 +446,101 @@ function toProductSummary(value: unknown): ProductSummary | null {
   };
 }
 
+function readImageUrl(value: unknown): string | null {
+  if (typeof value === "string") {
+    return asNonEmptyString(value);
+  }
+
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  return asNonEmptyString(value.url)
+    ?? asNonEmptyString(value.imageUrl)
+    ?? asNonEmptyString(value.secureUrl)
+    ?? asNonEmptyString(value.src)
+    ?? asNonEmptyString(value.path);
+}
+
+function toProductImageUrls(value: unknown, fallbackImageUrl?: string): string[] {
+  if (!isRecord(value)) {
+    return fallbackImageUrl ? [fallbackImageUrl] : [];
+  }
+
+  const urls: string[] = [];
+  const add = (candidate: string | null): void => {
+    if (!candidate || urls.includes(candidate)) {
+      return;
+    }
+    urls.push(candidate);
+  };
+
+  add(asNonEmptyString(value.imageUrl));
+  add(asNonEmptyString(value.defaultImageUrl));
+  add(asNonEmptyString(value.thumbnailUrl));
+
+  if (Array.isArray(value.imageUrls)) {
+    value.imageUrls.forEach((entry) => add(readImageUrl(entry)));
+  }
+
+  if (Array.isArray(value.images)) {
+    value.images.forEach((entry) => add(readImageUrl(entry)));
+  }
+
+  add(fallbackImageUrl ?? null);
+  return urls;
+}
+
+function toProductAttributeCategories(value: unknown): ProductDetailsAttributeCategory[] {
+  if (!isRecord(value)) {
+    return [];
+  }
+
+  const source = Array.isArray(value.attributeCategory)
+    ? value.attributeCategory
+    : Array.isArray(value.attributeCategories)
+      ? value.attributeCategories
+      : [];
+
+  return source
+    .filter((category): category is UnknownRecord => isRecord(category))
+    .map((category) => {
+      const attributes = Array.isArray(category.attributes)
+        ? category.attributes
+            .filter((attribute): attribute is UnknownRecord => isRecord(attribute))
+            .map((attribute) => ({
+              code: asNonEmptyString(attribute.code) ?? undefined,
+              label: asNonEmptyString(attribute.label) ?? asNonEmptyString(attribute.name) ?? undefined,
+              defaultValue: asNonEmptyString(attribute.defaultValue) ?? undefined,
+              status: asNonEmptyString(attribute.status) ?? undefined,
+            }))
+        : [];
+
+      return {
+        id: asNonEmptyString(category.id) ?? undefined,
+        code: asNonEmptyString(category.code) ?? undefined,
+        name: asNonEmptyString(category.name) ?? undefined,
+        attributes,
+      };
+    });
+}
+
+function toProductDetails(value: unknown): ProductDetails | null {
+  const summary = toProductSummary(value);
+  if (!summary || !isRecord(value)) {
+    return null;
+  }
+
+  const imageUrls = toProductImageUrls(value, summary.imageUrl);
+
+  return {
+    ...summary,
+    imageUrl: imageUrls[0] ?? summary.imageUrl,
+    imageUrls,
+    attributeCategories: toProductAttributeCategories(value),
+  };
+}
+
 function normalizeListProductsResponse(raw: unknown): ProductSummary[] {
   const candidates = collectCandidateRecords(raw);
 
@@ -401,6 +559,35 @@ function normalizeListProductsResponse(raw: unknown): ProductSummary[] {
   }
 
   throw new Error("List products response is missing a valid products array.");
+}
+
+function normalizeGetProductDetailsResponse(raw: unknown): ProductDetails {
+  if (
+    isRecord(raw)
+    && isRecord(raw.data)
+    && isRecord(raw.data.result)
+    && Array.isArray(raw.data.result.products)
+    && raw.data.result.products.length > 0
+  ) {
+    const detailedProduct = toProductDetails(raw.data.result.products[0]);
+    if (detailedProduct) {
+      return detailedProduct;
+    }
+  }
+
+  const candidates = collectCandidateRecords(raw);
+  for (const candidate of candidates) {
+    if (!Array.isArray(candidate.products) || candidate.products.length === 0) {
+      continue;
+    }
+
+    const detailedProduct = toProductDetails(candidate.products[0]);
+    if (detailedProduct) {
+      return detailedProduct;
+    }
+  }
+
+  throw new Error("Product details response is missing a valid product payload.");
 }
 
 function extractLineItems(candidates: UnknownRecord[]): unknown[] {
@@ -495,7 +682,11 @@ function readFromRecord(record: UnknownRecord, keys: string[]): unknown {
   return undefined;
 }
 
-function toCartLineItem(value: unknown, index: number): CartLineItem | null {
+function toCartLineItem(
+  value: unknown,
+  index: number,
+  options: { depth: number; parentQuoteLineItemId: string | null }
+): CartLineItem | null {
   if (!isRecord(value)) {
     return null;
   }
@@ -537,12 +728,17 @@ function toCartLineItem(value: unknown, index: number): CartLineItem | null {
 
   const quantity = asNumberLike(readFromRecord(value, ["quantity", "Quantity"]));
   const unitPrice = asNumberLike(readFromRecord(value, ["unitPrice", "UnitPrice"]));
-  const lineTotal = asNumberLike(readFromRecord(value, ["lineTotal", "totalPrice", "TotalPrice", "netAmount"]));
+  const mappedLineTotal = asNumberLike(
+    readFromRecord(value, ["lineTotal", "lineItemSubTotal", "totalPrice", "TotalPrice", "netAmount"])
+  );
+  const lineTotal = mappedLineTotal ?? (quantity !== null && unitPrice !== null ? quantity * unitPrice : null);
 
   // Keep UI identity separate from backend mutation identity so rows without server ids remain renderable.
   const uiId =
     quoteLineItemId ??
-    `${productId ?? "line"}-${productName}-${index}`.toLowerCase().replace(/\s+/g, "-");
+    `${options.parentQuoteLineItemId ?? "line"}-${options.depth}-${index}-${productId ?? "line"}-${productName}`
+      .toLowerCase()
+      .replace(/\s+/g, "-");
 
   return {
     uiId,
@@ -554,7 +750,39 @@ function toCartLineItem(value: unknown, index: number): CartLineItem | null {
     lineTotal,
     billingFrequency: asNonEmptyString(readFromRecord(value, ["billingFrequency", "BillingFrequency"])),
     periodBoundary: asNonEmptyString(readFromRecord(value, ["periodBoundary", "PeriodBoundary"])),
+    isChild: options.depth > 0,
+    parentQuoteLineItemId: options.parentQuoteLineItemId,
+    depth: options.depth,
   };
+}
+
+function toCartLineItems(
+  values: unknown[],
+  options: { depth: number; parentQuoteLineItemId: string | null }
+): CartLineItem[] {
+  const lineItems: CartLineItem[] = [];
+
+  values.forEach((value, index) => {
+    const line = toCartLineItem(value, index, options);
+    if (!line) {
+      return;
+    }
+
+    lineItems.push(line);
+
+    if (!isRecord(value) || !Array.isArray(value.childItems) || value.childItems.length === 0) {
+      return;
+    }
+
+    lineItems.push(
+      ...toCartLineItems(value.childItems, {
+        depth: options.depth + 1,
+        parentQuoteLineItemId: line.quoteLineItemId,
+      })
+    );
+  });
+
+  return lineItems;
 }
 
 function normalizeCartQuote(raw: unknown): CartQuote {
@@ -564,22 +792,21 @@ function normalizeCartQuote(raw: unknown): CartQuote {
     findStringField(candidates, "quoteID") ||
     findStringField(candidates, "id") ||
     findStringField(candidates, "quoteNumber");
+  const quoteName =
+    findStringField(candidates, "quoteName") ||
+    findStringField(candidates, "name") ||
+    findStringField(candidates, "quoteNumber");
 
   const extractedLineItems = extractLineItems(candidates);
   const lineItemSource = extractedLineItems.length > 0 ? extractedLineItems : findLikelyLineItems(raw);
-  const lineItems = lineItemSource
-    .map((item, index) => toCartLineItem(item, index))
-    .filter((item): item is CartLineItem => Boolean(item));
+  const lineItems = toCartLineItems(lineItemSource, {
+    depth: 0,
+    parentQuoteLineItemId: null,
+  });
 
-  const rawTotal =
-    findNumberField(candidates, "totalAmount") ??
-    findNumberField(candidates, "grandTotal") ??
-    findNumberField(candidates, "quoteTotal") ??
-    findNumberField(candidates, "quoteSubTotal") ??
-    findNumberField(candidates, "totalPrice") ??
-    findNumberField(candidates, "netAmount");
+  const summaryLineItems = lineItems.filter((item) => !item.isChild);
 
-  const computedTotal = lineItems.reduce((sum, item) => {
+  const computedTotal = summaryLineItems.reduce((sum, item) => {
     if (item.quantity === null || item.unitPrice === null) {
       return sum;
     }
@@ -587,10 +814,7 @@ function normalizeCartQuote(raw: unknown): CartQuote {
     return sum + item.quantity * item.unitPrice;
   }, 0);
 
-  const hasComputableTotal = lineItems.some((item) => item.quantity !== null && item.unitPrice !== null);
-  const totalAmount = rawTotal ?? (hasComputableTotal ? computedTotal : null);
-
-  const itemCount = lineItems.reduce((sum, item) => {
+  const itemCount = summaryLineItems.reduce((sum, item) => {
     if (item.quantity !== null && item.quantity > 0) {
       return sum + item.quantity;
     }
@@ -599,15 +823,16 @@ function normalizeCartQuote(raw: unknown): CartQuote {
 
   return {
     quoteId: quoteId ?? "",
+    quoteName,
     quoteStatus: findStringField(candidates, "quoteStatus") || findStringField(candidates, "status"),
     lineItems,
     totals: {
       itemCount,
-      totalAmount,
+      totalAmount: computedTotal,
       currencyCode: findStringField(candidates, "currencyCode") ?? "USD",
     },
     totalsComputation: {
-      isFallbackComputed: rawTotal === null,
+      isFallbackComputed: false,
     },
   };
 }
@@ -624,6 +849,55 @@ function normalizeCartMutationResult(raw: unknown): CartMutationResult {
 
   return {
     isSuccess,
+    message,
+  };
+}
+
+function normalizeCreateOrderFromQuoteResult(raw: unknown): CreateOrderFromQuoteResult {
+  const candidates = collectCandidateRecords(raw);
+  const success = findBooleanField(candidates, "success") ?? findBooleanField(candidates, "isSuccess") ?? false;
+  const queued = findBooleanField(candidates, "queued") ?? false;
+  const jobId = findStringField(candidates, "jobId");
+  const message =
+    findStringField(candidates, "message")
+    || findStringField(candidates, "statusMessage")
+    || findStringField(candidates, "error");
+
+  return {
+    success,
+    queued,
+    jobId,
+    message,
+  };
+}
+
+function normalizeOrderProcessingStatus(value: string | null): OrderProcessingStatus {
+  const normalizedValue = value?.trim().toLowerCase();
+
+  if (normalizedValue === "processing") {
+    return "Processing";
+  }
+  if (normalizedValue === "completed") {
+    return "Completed";
+  }
+  if (normalizedValue === "failed") {
+    return "Failed";
+  }
+  return "Unknown";
+}
+
+function normalizeGetOrderStatusResult(raw: unknown): GetOrderStatusResult {
+  const candidates = collectCandidateRecords(raw);
+  const normalizedStatus = normalizeOrderProcessingStatus(
+    findStringField(candidates, "status") || findStringField(candidates, "orderStatus")
+  );
+  const message =
+    findStringField(candidates, "message")
+    || findStringField(candidates, "statusMessage")
+    || findStringField(candidates, "error");
+
+  return {
+    status: normalizedStatus,
     message,
   };
 }
@@ -680,6 +954,16 @@ export async function listProducts(
   return normalizeListProductsResponse(response);
 }
 
+export async function getProductDetails(
+  payload: GetProductDetailsPayload
+): Promise<ProductDetails> {
+  const response = await callIntegration<unknown, GetProductDetailsPayload>(
+    INTEGRATION_ROUTES.getProductDetails,
+    payload
+  );
+  return normalizeGetProductDetailsResponse(response);
+}
+
 export async function getQuotesWithQuoteLines(payload: { quoteId: string }): Promise<CartQuote> {
   const response = await callIntegration<unknown, { quoteId: string }>(
     INTEGRATION_ROUTES.getQuotesWithQuoteLines,
@@ -712,10 +996,18 @@ export async function removeProductsToCart(payload: RemoveProductsFromCartPayloa
   return normalizeCartMutationResult(response);
 }
 
-export async function createOrdersFromQuote(payload: CreateOrderFromQuotePayload): Promise<CartMutationResult> {
+export async function createOrdersFromQuote(payload: CreateOrderFromQuotePayload): Promise<CreateOrderFromQuoteResult> {
   const response = await callIntegration<unknown, CreateOrderFromQuotePayload>(
     INTEGRATION_ROUTES.createOrdersFromQuote,
     payload
   );
-  return normalizeCartMutationResult(response);
+  return normalizeCreateOrderFromQuoteResult(response);
+}
+
+export async function getOrderStatus(payload: GetOrderStatusPayload): Promise<GetOrderStatusResult> {
+  const response = await callIntegration<unknown, GetOrderStatusPayload>(
+    INTEGRATION_ROUTES.getOrderStatus,
+    payload
+  );
+  return normalizeGetOrderStatusResult(response);
 }

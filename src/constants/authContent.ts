@@ -8,6 +8,12 @@ export const AUTH_COPY = {
     actionSubtitle: "Use your email and password to continue.",
     submitLabel: "Sign in",
     signupCta: "Create account",
+    progress: {
+      authenticating: "Signing you in",
+      syncingIdentity: "Syncing your profile",
+      evaluatingDecision: "Preparing your workspace",
+      finalizing: "Finalizing setup",
+    },
     credentialErrorMessage: "Unable to sign in with credentials.",
     missingIdentityWarningMessage:
       "Unable to find your RCA profile details. Redirecting to catalog page.",
@@ -23,6 +29,13 @@ export const AUTH_COPY = {
     actionSubtitle: "Use your email and password to create an account.",
     submitLabel: "Create account",
     loginCta: "Have an account? Sign in",
+    progress: {
+      creatingAccount: "Creating your account",
+      syncingIdentity: "Syncing your profile",
+      creatingDefaultQuote: "Preparing your default quote",
+      evaluatingDecision: "Preparing your workspace",
+      finalizing: "Finalizing setup",
+    },
     fallbackErrorMessage: "Unable to create account.",
     profileWarningMessage: "Account created, but your profile details are still updating.",
     syncWarningMessage: "Account created, but profile sync is still pending.",

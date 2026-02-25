@@ -8,6 +8,7 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import ProductDetailsDialog from "../components/product/ProductDetailsDialog";
 import ProductList from "../components/product/ProductList";
 import { catalogGlassSurfaceSx } from "../components/catalog/styles";
+import { APP_EVENTS } from "../constants/appEvents";
 import { PRODUCT_COPY } from "../constants/productContent";
 import { ROUTES } from "../constants/routes";
 import { useAuth } from "../context/useAuth";
@@ -378,6 +379,7 @@ export default function ProductLanding() {
         }
 
         notifySuccess(response.message ?? productLandingCopy.addToCartSuccessMessage);
+        window.dispatchEvent(new Event(APP_EVENTS.cartUpdated));
       } catch (error) {
         notifyError(toIntegrationErrorMessage(error));
       } finally {
@@ -617,6 +619,8 @@ export default function ProductLanding() {
           activeLabel: productLandingCopy.activeLabel,
           autoRenewLabel: productLandingCopy.autoRenewLabel,
           availabilityLabel: productLandingCopy.availabilityLabel,
+          childItemsTitle: productLandingCopy.childItemsTitle,
+          childItemsQuantityLabel: productLandingCopy.childItemsQuantityLabel,
           categoryLabel: productLandingCopy.categoryLabel,
           defaultValueLabel: productLandingCopy.defaultValueLabel,
           closeDetailsAriaLabel: productLandingCopy.closeDetailsAriaLabel,
@@ -630,6 +634,7 @@ export default function ProductLanding() {
           modelStatusLabel: productLandingCopy.modelStatusLabel,
           modelTypeLabel: productLandingCopy.modelTypeLabel,
           noAttributesMessage: productLandingCopy.noAttributesMessage,
+          noChildItemsMessage: productLandingCopy.noChildItemsMessage,
           noLabel: productLandingCopy.noLabel,
           notAvailableLabel: productLandingCopy.notAvailableLabel,
           noSellingModelMessage: productLandingCopy.noSellingModelMessage,

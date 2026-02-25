@@ -25,7 +25,7 @@ import {
   Typography,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import { useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { Link as RouterLink, Navigate } from "react-router-dom";
 import { ReadOnlyField } from "../components/settings/ReadOnlyField";
 import { SettingsSectionCard } from "../components/settings/SettingsSectionCard";
@@ -33,6 +33,7 @@ import { PRODUCT_COPY } from "../constants/productContent";
 import { ROUTES } from "../constants/routes";
 import { useAuth } from "../context/useAuth";
 import { useNotification } from "../context/useNotification";
+import { evaluateDecision } from "../services/salesforceApi";
 
 function formatIsoTimestamp(value: string | null, fallback: string): string {
   if (!value) {
@@ -58,6 +59,7 @@ export default function UserSettings() {
     logout,
     rcaSyncStatus,
     decisionSession,
+    setDecisionSession,
     retryRcaSync,
     uploadProfilePhoto,
     removeProfilePhoto,
@@ -87,6 +89,33 @@ export default function UserSettings() {
   );
 
   const appVersion = import.meta.env.VITE_APP_VERSION?.trim() || "0.0.0";
+  const isPasswordResetEnabled = import.meta.env.VITE_ENABLE_PASSWORD_RESET === "true";
+
+  useEffect(() => {
+    if (!isAuthReady || !isLoggedIn) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const refreshDecisionSession = async () => {
+      try {
+        const decision = await evaluateDecision();
+        if (!isMounted) {
+          return;
+        }
+        setDecisionSession(decision);
+      } catch {
+        // Keep existing decision session if refresh fails.
+      }
+    };
+
+    void refreshDecisionSession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthReady, isLoggedIn, setDecisionSession]);
 
   const syncStatusLabel =
     rcaSyncStatus.state === "failed"
@@ -328,7 +357,7 @@ export default function UserSettings() {
               variant="contained"
               startIcon={<LockResetOutlinedIcon />}
               onClick={() => void handleSendResetEmail()}
-              disabled={isSendingReset || !accountEmail}
+              disabled={isSendingReset || !accountEmail || !isPasswordResetEnabled}
               sx={{ alignSelf: "flex-start" }}
             >
               {settingsCopy.resetPasswordCta}
@@ -447,10 +476,6 @@ export default function UserSettings() {
                 ))}
               </Stack>
 
-              <ReadOnlyField
-                label={settingsCopy.lastErrorLabel}
-                value={rcaSyncStatus.lastErrorMessage ?? settingsCopy.unavailableValue}
-              />
             </Stack>
           </AccordionDetails>
         </Accordion>

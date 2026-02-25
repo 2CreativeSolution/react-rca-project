@@ -1,7 +1,6 @@
-import { Box, Button, Stack } from "@mui/material";
+import { Box, Button, CircularProgress, Stack } from "@mui/material";
 import { useMemo, useState, type FormEvent } from "react";
 import { Link as RouterLink, Navigate, useNavigate } from "react-router-dom";
-import AuthProgressStatus from "../components/ui/AuthProgressStatus";
 import AuthShell from "../components/ui/AuthShell";
 import AuthTextField from "../components/ui/AuthTextField";
 import { AUTH_COPY } from "../constants/authContent";
@@ -40,7 +39,6 @@ export default function Signup() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [progressStep, setProgressStep] = useState<SignupProgressStep>("creatingAccount");
-  const progressLabel = useMemo(() => signupCopy.progress[progressStep], [progressStep, signupCopy.progress]);
 
   const validationError = useMemo(() => {
     if (!fullName.trim()) {
@@ -174,16 +172,16 @@ export default function Signup() {
             variant="contained"
             size="large"
             disabled={isSubmitting}
+            startIcon={isSubmitting ? <CircularProgress size={16} color="inherit" /> : undefined}
+            aria-busy={isSubmitting ? "true" : undefined}
             sx={{
               py: 1.25,
               borderRadius: 3,
               fontWeight: 800,
             }}
           >
-            {signupCopy.submitLabel}
+            {isSubmitting ? signupCopy.progress[progressStep] : signupCopy.submitLabel}
           </Button>
-
-          {isSubmitting ? <AuthProgressStatus active label={progressLabel} /> : null}
         </Stack>
 
         <Box sx={{ display: "flex", justifyContent: "center", pt: 0.5 }}>

@@ -1,11 +1,11 @@
 import {
   Box,
   Button,
+  CircularProgress,
   Stack,
 } from "@mui/material";
-import { useMemo, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Link as RouterLink, Navigate, useNavigate } from "react-router-dom";
-import AuthProgressStatus from "../components/ui/AuthProgressStatus";
 import AuthShell from "../components/ui/AuthShell";
 import AuthTextField from "../components/ui/AuthTextField";
 import { AUTH_COPY } from "../constants/authContent";
@@ -36,7 +36,6 @@ export default function Login() {
   const [progressStep, setProgressStep] = useState<LoginProgressStep>("authenticating");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const progressLabel = useMemo(() => loginCopy.progress[progressStep], [loginCopy.progress, progressStep]);
 
   if (isAuthReady && isLoggedIn && !hasCredentialSubmit) {
     const hasActiveOrderAndAsset = decisionSession.isActiveOrder && decisionSession.isActiveAsset;
@@ -136,16 +135,16 @@ export default function Login() {
             variant="contained"
             size="large"
             disabled={isSubmitting}
+            startIcon={isSubmitting ? <CircularProgress size={16} color="inherit" /> : undefined}
+            aria-busy={isSubmitting ? "true" : undefined}
             sx={{
               py: 1.25,
               borderRadius: 3,
               fontWeight: 800,
             }}
           >
-            {loginCopy.submitLabel}
+            {isSubmitting ? loginCopy.progress[progressStep] : loginCopy.submitLabel}
           </Button>
-
-          {isSubmitting ? <AuthProgressStatus active label={progressLabel} /> : null}
         </Stack>
 
         <Box sx={{ display: "flex", justifyContent: "center", pt: 0.5 }}>

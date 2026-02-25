@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import {
   createUserWithEmailAndPassword,
@@ -205,21 +205,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const setDecisionSession = (session: DecisionSession) => {
-    setDecisionSessionState(session);
-    const user = auth.currentUser ?? currentUser;
-    if (user?.uid) {
-      writeDecisionSession(user.uid, session);
-    }
-  };
+  const setDecisionSession = useCallback(
+    (session: DecisionSession) => {
+      setDecisionSessionState(session);
+      const user = auth.currentUser ?? currentUser;
+      if (user?.uid) {
+        writeDecisionSession(user.uid, session);
+      }
+    },
+    [currentUser]
+  );
 
-  const clearDecisionSession = () => {
+  const clearDecisionSession = useCallback(() => {
     setDecisionSessionState(getDefaultDecisionSession());
     const user = auth.currentUser ?? currentUser;
     if (user?.uid) {
       clearDecisionSessionStorage(user.uid);
     }
-  };
+  }, [currentUser]);
 
   const clearRcaIdentity = () => {
     setRcaIdentityState(null);

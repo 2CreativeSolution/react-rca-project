@@ -67,9 +67,18 @@ export type ProductDetailsAttributeCategory = {
   attributes: ProductDetailsAttribute[];
 };
 
+export type ProductDetailsChildItem = {
+  id?: string;
+  name: string;
+  description?: string;
+  quantity?: number;
+  children: ProductDetailsChildItem[];
+};
+
 export type ProductDetails = ProductSummary & {
   imageUrls: string[];
   attributeCategories: ProductDetailsAttributeCategory[];
+  childItems: ProductDetailsChildItem[];
 };
 
 export type ProductPricebookEntry = {
@@ -525,6 +534,101 @@ function toProductAttributeCategories(value: unknown): ProductDetailsAttributeCa
     });
 }
 
+function dedupeChildItems(items: ProductDetailsChildItem[]): ProductDetailsChildItem[] {
+  const seenKeys = new Set<string>();
+  const deduped: ProductDetailsChildItem[] = [];
+
+  items.forEach((item) => {
+    // TODO: Revisit dedupe strategy when backend payload guarantees stable IDs.
+    // For now we intentionally dedupe unnamed-ID entries by normalized name to reduce duplicate UI rows.
+    const key = `${item.id ?? "na"}::${item.name.toLowerCase()}`;
+    if (seenKeys.has(key)) {
+      return;
+    }
+    seenKeys.add(key);
+    deduped.push(item);
+  });
+
+  return deduped;
+}
+
+function toChildItemsFromChildProducts(value: unknown): ProductDetailsChildItem[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => {
+      if (!isRecord(entry)) {
+        return null;
+      }
+
+      const name = asNonEmptyString(entry.name);
+      if (!name) {
+        return null;
+      }
+
+      return {
+        id: asNonEmptyString(entry.id) ?? undefined,
+        name,
+        description: asNonEmptyString(entry.description) ?? undefined,
+        quantity: asNumberLike(entry.quantity) ?? undefined,
+        children: toChildItemsFromChildProducts(entry.childProducts),
+      } as ProductDetailsChildItem;
+    })
+    .filter((item): item is ProductDetailsChildItem => Boolean(item));
+}
+
+function toChildItemsFromProductComponentGroups(value: unknown): ProductDetailsChildItem[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const items: ProductDetailsChildItem[] = [];
+
+  value.forEach((group) => {
+    if (!isRecord(group)) {
+      return;
+    }
+
+    const components = Array.isArray(group.components) ? group.components : [];
+    components.forEach((component) => {
+      if (!isRecord(component)) {
+        return;
+      }
+
+      const name = asNonEmptyString(component.name);
+      if (!name) {
+        return;
+      }
+
+      const related = isRecord(component.productRelatedComponent) ? component.productRelatedComponent : null;
+      const nestedFromGroups = toChildItemsFromProductComponentGroups(component.productComponentGroups);
+      const nestedFromChildProducts = toChildItemsFromChildProducts(component.childProducts);
+      const children = dedupeChildItems([...nestedFromGroups, ...nestedFromChildProducts]);
+
+      items.push({
+        id:
+          asNonEmptyString(component.id)
+          ?? (related ? asNonEmptyString(related.childProductId) : null)
+          ?? undefined,
+        name,
+        description: asNonEmptyString(component.description) ?? undefined,
+        quantity:
+          (related ? asNumberLike(related.quantity) : null)
+          ?? asNumberLike(component.quantity)
+          ?? undefined,
+        children,
+      });
+    });
+
+    const nestedGroups = toChildItemsFromProductComponentGroups(group.childGroups);
+    items.push(...nestedGroups);
+  });
+
+  return dedupeChildItems(items);
+}
+
 function toProductDetails(value: unknown): ProductDetails | null {
   const summary = toProductSummary(value);
   if (!summary || !isRecord(value)) {
@@ -532,12 +636,16 @@ function toProductDetails(value: unknown): ProductDetails | null {
   }
 
   const imageUrls = toProductImageUrls(value, summary.imageUrl);
+  const childItemsFromComponents = toChildItemsFromProductComponentGroups(value.productComponentGroups);
+  const fallbackChildItems = toChildItemsFromChildProducts(value.childProducts);
+  const childItems = childItemsFromComponents.length > 0 ? childItemsFromComponents : fallbackChildItems;
 
   return {
     ...summary,
     imageUrl: imageUrls[0] ?? summary.imageUrl,
     imageUrls,
     attributeCategories: toProductAttributeCategories(value),
+    childItems,
   };
 }
 

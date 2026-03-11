@@ -36,7 +36,6 @@ export default function Dashboard() {
         activationHighlights={viewModel.activationHighlights}
         quotesPreview={viewModel.quotesPreview}
         assetsPreview={viewModel.assetsPreview}
-        insights={viewModel.insights}
       />
     </Stack>
   );

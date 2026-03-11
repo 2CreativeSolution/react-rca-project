@@ -215,3 +215,8 @@ Keep entries outcome-focused. Prefer updating a single entry per feature/change 
   - Artifacts:
     - `src/components/dashboard/sections.tsx`
     - `src/hooks/useDashboardViewModel.ts`
+
+- Updated AI Insights panel to a static "Coming soon." state and added a subtle animated spark border effect limited to that card.
+  - Artifacts:
+    - `src/components/dashboard/sections.tsx`
+    - `src/pages/Dashboard.tsx`

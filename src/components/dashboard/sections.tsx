@@ -17,10 +17,15 @@ import {
 import { alpha } from "@mui/material/styles";
 import { keyframes } from "@mui/system";
 import { useEffect, useMemo, useState } from "react";
-import type { DashboardAsset, DashboardInsight, DashboardOrder, DashboardQuote, DashboardSummary } from "../../services/salesforceApi";
+import type { DashboardAsset, DashboardOrder, DashboardQuote, DashboardSummary } from "../../services/salesforceApi";
 import { formatCurrency, formatEta, mapStatusColor } from "./formatters";
 
 const ETA_TEXT_COLOR = "#0F4C81";
+const insightsBorderSpark = keyframes`
+  to {
+    transform: rotate(1turn);
+  }
+`;
 const chartGrow = keyframes`
   from {
     transform: scaleY(0);
@@ -435,13 +440,11 @@ export function DashboardContent({
   activationHighlights,
   quotesPreview,
   assetsPreview,
-  insights,
 }: {
   orderHealth: { inProgressCount: number; activeCount: number; pastCount: number };
   activationHighlights: DashboardOrder[];
   quotesPreview: DashboardQuote[];
   assetsPreview: DashboardAsset[];
-  insights: DashboardInsight[];
 }) {
   return (
     <Grid container spacing={1.5}>
@@ -501,18 +504,41 @@ export function DashboardContent({
         <Stack spacing={1.5}>
           <QuotesAssetsCarousel quotesPreview={quotesPreview} assetsPreview={assetsPreview} />
 
-          <Paper variant="outlined" sx={{ borderRadius: 2, p: 2 }}>
-            <Stack spacing={1.2}>
+          <Paper
+            variant="outlined"
+            sx={(theme) => ({
+              position: "relative",
+              borderRadius: 2,
+              p: 2,
+              overflow: "hidden",
+              border: "1px solid transparent",
+              "&::before": {
+                content: '""',
+                position: "absolute",
+                width: "220%",
+                height: "220%",
+                left: "-60%",
+                top: "-60%",
+                borderRadius: "inherit",
+                background: `conic-gradient(from 0deg, transparent 0deg, transparent 292deg, ${alpha(theme.palette.info.main, 0.85)} 330deg, transparent 360deg)`,
+                animation: `${insightsBorderSpark} 3.2s linear infinite`,
+                pointerEvents: "none",
+              },
+              "&::after": {
+                content: '""',
+                position: "absolute",
+                inset: 1,
+                borderRadius: "inherit",
+                bgcolor: theme.palette.background.paper,
+                pointerEvents: "none",
+              },
+            })}
+          >
+            <Stack spacing={1.2} sx={{ position: "relative", zIndex: 2 }}>
               <Typography variant="h6">AI Insights</Typography>
-              {insights.length === 0 ? (
-                <Typography color="text.secondary" variant="body2">
-                  No insights available yet.
-                </Typography>
-              ) : (
-                <Typography color="text.secondary" variant="body2">
-                  {`${insights.length} insights available.`}
-                </Typography>
-              )}
+              <Typography color="text.secondary" variant="body2">
+                Coming soon.
+              </Typography>
             </Stack>
           </Paper>
         </Stack>

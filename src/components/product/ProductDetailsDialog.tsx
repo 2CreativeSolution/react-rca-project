@@ -25,7 +25,7 @@ import {
   Typography,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type { ProductDetails, ProductSummary } from "../../services/salesforceApi";
 import { formatAvailabilityDate, formatBooleanLabel, toProductInitials } from "./formatters";
 
@@ -37,6 +37,8 @@ type ProductDetailsLabels = {
   availabilityLabel: string;
   categoryLabel: string;
   closeDetailsAriaLabel: string;
+  childItemsQuantityLabel: string;
+  childItemsTitle: string;
   defaultOptionLabel: string;
   defaultValueLabel: string;
   detailsTitleFallback: string;
@@ -50,6 +52,7 @@ type ProductDetailsLabels = {
   noAttributesMessage: string;
   noLabel: string;
   nodeTypeLabel: string;
+  noChildItemsMessage: string;
   notAvailableLabel: string;
   noSellingModelMessage: string;
   pricingTermLabel: string;
@@ -69,6 +72,7 @@ type ProductDetailsDialogProps = {
 };
 
 const THUMBNAIL_SLOTS = 4;
+const CHILD_INDENT_UNIT = 2;
 
 function toDisplayValue(value: string | undefined, fallback: string): string {
   return value?.trim() ? value : fallback;
@@ -94,6 +98,7 @@ export default function ProductDetailsDialog({
 
   const sellingModelOptions = productDetails?.productSellingModelOptions ?? [];
   const attributeCategories = productDetails?.attributeCategories ?? [];
+  const childItems = productDetails?.childItems ?? [];
 
   return (
     <Dialog
@@ -407,6 +412,206 @@ export default function ProductDetailsDialog({
                       </Typography>
                     )}
                   </Stack>
+
+                  {isLoading || childItems.length > 0 ? <Divider /> : null}
+
+                  {isLoading || childItems.length > 0 ? (
+                    <Stack spacing={1.1}>
+                      {isLoading ? (
+                      <>
+                        <Typography variant="subtitle1">{labels.childItemsTitle}</Typography>
+                        <Stack spacing={1}>
+                          <Skeleton variant="rounded" height={42} />
+                          <Skeleton variant="rounded" height={42} />
+                        </Stack>
+                      </>
+                      ) : (
+                      <Accordion
+                        disableGutters
+                        sx={{
+                          border: "1px solid",
+                          borderColor: "divider",
+                          borderRadius: 1.5,
+                          overflow: "hidden",
+                          "&:before": { display: "none" },
+                        }}
+                      >
+                        <AccordionSummary
+                          expandIcon={<ExpandMoreOutlinedIcon />}
+                          sx={{ px: 1.5, py: 0.25, minHeight: 50, "& .MuiAccordionSummary-content": { my: 0.5 } }}
+                        >
+                          <Stack
+                            direction="row"
+                            alignItems="center"
+                            justifyContent="space-between"
+                            spacing={1}
+                            sx={{ width: "100%" }}
+                          >
+                            <Typography variant="subtitle1">{labels.childItemsTitle}</Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {childItems.length}
+                            </Typography>
+                          </Stack>
+                        </AccordionSummary>
+                        <AccordionDetails sx={{ px: 1, pb: 1.25, pt: 0 }}>
+                          <Stack spacing={1} sx={{ maxHeight: 280, overflowY: "auto", pr: 0.5 }}>
+                            {childItems.map((item, index) => {
+                              const itemKey = item.id ?? `child-item-${index}`;
+                              const hasChildren = item.children.length > 0;
+
+                              const rowHeader = (
+                                <Stack
+                                  direction="row"
+                                  alignItems="center"
+                                  justifyContent="space-between"
+                                  spacing={1}
+                                  sx={{ py: 0.25, width: "100%" }}
+                                >
+                                  <Stack spacing={0.2} sx={{ minWidth: 0 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {item.name}
+                                    </Typography>
+                                    {item.description?.trim() ? (
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                        sx={{
+                                          display: "-webkit-box",
+                                          overflow: "hidden",
+                                          WebkitLineClamp: 1,
+                                          WebkitBoxOrient: "vertical",
+                                        }}
+                                      >
+                                        {item.description}
+                                      </Typography>
+                                    ) : null}
+                                  </Stack>
+                                  <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
+                                    {labels.childItemsQuantityLabel}: {item.quantity ?? labels.notAvailableLabel}
+                                  </Typography>
+                                </Stack>
+                              );
+
+                              if (!hasChildren) {
+                                return (
+                                  <Paper key={itemKey} variant="outlined" sx={{ borderRadius: 1.5, px: 1.5, py: 1 }}>
+                                    {rowHeader}
+                                  </Paper>
+                                );
+                              }
+
+                              const renderNestedChildren = (
+                                items: ProductDetails["childItems"],
+                                depth: number,
+                                path: string
+                              ): ReactNode => (
+                                <Stack spacing={1} sx={{ pl: depth * CHILD_INDENT_UNIT }}>
+                                  {items.map((nestedItem, nestedIndex) => {
+                                    const nestedKey = nestedItem.id ?? `${path}-${nestedIndex}`;
+                                    const nestedHasChildren = nestedItem.children.length > 0;
+
+                                    const nestedHeader = (
+                                      <Stack
+                                        direction="row"
+                                        alignItems="center"
+                                        justifyContent="space-between"
+                                        spacing={1}
+                                        sx={{ py: 0.25, width: "100%" }}
+                                      >
+                                        <Stack spacing={0.2} sx={{ minWidth: 0 }}>
+                                          <Typography variant="body2" sx={{ fontWeight: depth > 1 ? 500 : 600 }}>
+                                            {nestedItem.name}
+                                          </Typography>
+                                          {nestedItem.description?.trim() ? (
+                                            <Typography
+                                              variant="caption"
+                                              color="text.secondary"
+                                              sx={{
+                                                display: "-webkit-box",
+                                                overflow: "hidden",
+                                                WebkitLineClamp: 1,
+                                                WebkitBoxOrient: "vertical",
+                                              }}
+                                            >
+                                              {nestedItem.description}
+                                            </Typography>
+                                          ) : null}
+                                        </Stack>
+                                        <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
+                                          {labels.childItemsQuantityLabel}: {nestedItem.quantity ?? labels.notAvailableLabel}
+                                        </Typography>
+                                      </Stack>
+                                    );
+
+                                    if (!nestedHasChildren) {
+                                      return (
+                                        <Paper
+                                          key={nestedKey}
+                                          variant="outlined"
+                                          sx={{ borderRadius: 1.5, px: 1.5, py: 1 }}
+                                        >
+                                          {nestedHeader}
+                                        </Paper>
+                                      );
+                                    }
+
+                                    return (
+                                      <Accordion
+                                        key={nestedKey}
+                                        disableGutters
+                                        sx={{
+                                          border: "1px solid",
+                                          borderColor: "divider",
+                                          borderRadius: 1.5,
+                                          overflow: "hidden",
+                                          "&:before": { display: "none" },
+                                        }}
+                                      >
+                                        <AccordionSummary
+                                          expandIcon={<ExpandMoreOutlinedIcon />}
+                                          sx={{ px: 1.5, py: 0.25, minHeight: 46, "& .MuiAccordionSummary-content": { my: 0.5 } }}
+                                        >
+                                          {nestedHeader}
+                                        </AccordionSummary>
+                                        <AccordionDetails sx={{ px: 1, pb: 1.25, pt: 0 }}>
+                                          {renderNestedChildren(nestedItem.children, depth + 1, `${nestedKey}-child`)}
+                                        </AccordionDetails>
+                                      </Accordion>
+                                    );
+                                  })}
+                                </Stack>
+                              );
+
+                              return (
+                                <Accordion
+                                  key={itemKey}
+                                  disableGutters
+                                  sx={{
+                                    border: "1px solid",
+                                    borderColor: "divider",
+                                    borderRadius: 1.5,
+                                    overflow: "hidden",
+                                    "&:before": { display: "none" },
+                                  }}
+                                >
+                                  <AccordionSummary
+                                    expandIcon={<ExpandMoreOutlinedIcon />}
+                                    sx={{ px: 1.5, py: 0.25, minHeight: 50, "& .MuiAccordionSummary-content": { my: 0.5 } }}
+                                  >
+                                    {rowHeader}
+                                  </AccordionSummary>
+                                  <AccordionDetails sx={{ px: 1, pb: 1.25, pt: 0 }}>
+                                    {renderNestedChildren(item.children, 1, `${itemKey}-child`)}
+                                  </AccordionDetails>
+                                </Accordion>
+                              );
+                            })}
+                          </Stack>
+                        </AccordionDetails>
+                      </Accordion>
+                      )}
+                    </Stack>
+                  ) : null}
                 </Stack>
               </Paper>
             </Grid>

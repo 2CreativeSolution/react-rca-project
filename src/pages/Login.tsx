@@ -1,6 +1,7 @@
 import {
   Box,
   Button,
+  CircularProgress,
   Stack,
 } from "@mui/material";
 import { useState, type FormEvent } from "react";
@@ -13,6 +14,7 @@ import { useAuth } from "../context/useAuth";
 import { useNotification } from "../context/useNotification";
 import { evaluateDecision } from "../services/salesforceApi";
 
+type LoginProgressStep = "authenticating" | "syncingIdentity" | "evaluatingDecision" | "finalizing";
 
 export default function Login() {
   const loginCopy = AUTH_COPY.login;
@@ -31,6 +33,7 @@ export default function Login() {
   const { notifyError, notifyWarning } = useNotification();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasCredentialSubmit, setHasCredentialSubmit] = useState(false);
+  const [progressStep, setProgressStep] = useState<LoginProgressStep>("authenticating");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -43,12 +46,15 @@ export default function Login() {
     event.preventDefault();
     setHasCredentialSubmit(true);
     setIsSubmitting(true);
+    setProgressStep("authenticating");
 
     try {
+      setProgressStep("authenticating");
       await loginWithCredentials(email, password);
 
       let resolvedIdentity = rcaIdentity;
       if (!resolvedIdentity) {
+        setProgressStep("syncingIdentity");
         const syncResult = await syncRcaIdentity();
         if (syncResult.success && syncResult.identity) {
           resolvedIdentity = {
@@ -67,9 +73,11 @@ export default function Login() {
       }
 
       try {
+        setProgressStep("evaluatingDecision");
         const decision = await evaluateDecision();
         setDecisionSession(decision);
         const hasActiveOrderAndAsset = decision.isActiveOrder || decision.isActiveAsset;
+        setProgressStep("finalizing");
         navigate(hasActiveOrderAndAsset ? ROUTES.dashboard : ROUTES.catalog, { replace: true });
       } catch {
         clearDecisionSession();
@@ -109,6 +117,7 @@ export default function Login() {
             name="email"
             autoComplete="email"
             value={email}
+            disabled={isSubmitting}
             onChange={(event) => setEmail(event.target.value)}
           />
           <AuthTextField
@@ -117,6 +126,7 @@ export default function Login() {
             name="password"
             autoComplete="current-password"
             value={password}
+            disabled={isSubmitting}
             onChange={(event) => setPassword(event.target.value)}
           />
 
@@ -125,18 +135,20 @@ export default function Login() {
             variant="contained"
             size="large"
             disabled={isSubmitting}
+            startIcon={isSubmitting ? <CircularProgress size={16} color="inherit" /> : undefined}
+            aria-busy={isSubmitting ? "true" : undefined}
             sx={{
               py: 1.25,
               borderRadius: 3,
               fontWeight: 800,
             }}
           >
-            {loginCopy.submitLabel}
+            {isSubmitting ? loginCopy.progress[progressStep] : loginCopy.submitLabel}
           </Button>
         </Stack>
 
         <Box sx={{ display: "flex", justifyContent: "center", pt: 0.5 }}>
-          <Button component={RouterLink} to={ROUTES.signup} size="small" color="inherit">
+          <Button component={RouterLink} to={ROUTES.signup} size="small" color="inherit" disabled={isSubmitting}>
             {loginCopy.signupCta}
           </Button>
         </Box>

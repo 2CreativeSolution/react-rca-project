@@ -54,6 +54,8 @@ export default function CartLineList({
   onSave,
   onRemove,
 }: CartLineListProps) {
+  const TREE_INDENT_SPACING = 2.75;
+  const TREE_TOGGLE_SLOT_SIZE = 28;
   const [expandedParentIds, setExpandedParentIds] = useState<Record<string, boolean>>({});
 
   const childrenByParent = useMemo(() => {
@@ -131,16 +133,23 @@ export default function CartLineList({
               const displayedLineTotal = line.lineTotal;
               const canToggleChildren = hasChildren(line);
               const isExpanded = Boolean(line.quoteLineItemId && expandedParentIds[line.quoteLineItemId]);
+              const indentLevel = line.depth > 0 ? line.depth : line.isChild ? 1 : 0;
 
               return (
                 <TableRow key={line.uiId}>
                   <TableCell>
-                    <Stack alignItems="center" direction="row" spacing={0.5} sx={{ pl: line.depth > 0 ? line.depth * 2 : 0 }}>
+                    <Stack
+                      alignItems="center"
+                      direction="row"
+                      spacing={0.5}
+                      sx={{ pl: indentLevel * TREE_INDENT_SPACING }}
+                    >
                       {canToggleChildren ? (
                         <IconButton
                           aria-label={line.productName}
                           onClick={() => toggleExpanded(line)}
                           size="small"
+                          sx={{ width: TREE_TOGGLE_SLOT_SIZE, height: TREE_TOGGLE_SLOT_SIZE }}
                         >
                           {isExpanded ? (
                             <ExpandMoreRoundedIcon fontSize="small" />
@@ -148,6 +157,8 @@ export default function CartLineList({
                             <ChevronRightRoundedIcon fontSize="small" />
                           )}
                         </IconButton>
+                      ) : line.isChild ? (
+                        <Box sx={{ width: TREE_TOGGLE_SLOT_SIZE, height: TREE_TOGGLE_SLOT_SIZE, flexShrink: 0 }} />
                       ) : null}
                       <Typography variant="body2" sx={{ fontWeight: line.isChild ? 500 : 600 }}>
                         {line.productName}

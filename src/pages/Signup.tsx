@@ -1,4 +1,4 @@
-import { Box, Button, Stack } from "@mui/material";
+import { Box, Button, CircularProgress, Stack } from "@mui/material";
 import { useMemo, useState, type FormEvent } from "react";
 import { Link as RouterLink, Navigate, useNavigate } from "react-router-dom";
 import AuthShell from "../components/ui/AuthShell";
@@ -8,6 +8,13 @@ import { ROUTES } from "../constants/routes";
 import { useAuth } from "../context/useAuth";
 import { useNotification } from "../context/useNotification";
 import { evaluateDecision } from "../services/salesforceApi";
+
+type SignupProgressStep =
+  | "creatingAccount"
+  | "syncingIdentity"
+  | "creatingDefaultQuote"
+  | "evaluatingDecision"
+  | "finalizing";
 
 function isEmailValid(email: string) {
   return /\S+@\S+\.\S+/.test(email);
@@ -31,6 +38,7 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [progressStep, setProgressStep] = useState<SignupProgressStep>("creatingAccount");
 
   const validationError = useMemo(() => {
     if (!fullName.trim()) {
@@ -61,14 +69,17 @@ export default function Signup() {
     }
 
     setIsSubmitting(true);
+    setProgressStep("creatingAccount");
 
     try {
+      setProgressStep("creatingAccount");
       const signupResult = await signupWithCredentials(fullName.trim(), email.trim(), password);
 
       if (signupResult.profileUpdateFailed) {
         notifyWarning(signupCopy.profileWarningMessage);
       }
 
+      setProgressStep("syncingIdentity");
       const syncResult = await syncRcaIdentity();
       if (!syncResult.success) {
         notifyWarning(signupCopy.syncWarningMessage);
@@ -76,6 +87,7 @@ export default function Signup() {
       }
 
       if (syncResult.identity) {
+        setProgressStep("creatingDefaultQuote");
         const defaultQuoteResult = await initializeDefaultQuote(syncResult.identity);
         if (!defaultQuoteResult.success) {
           notifyWarning(signupCopy.defaultQuoteWarningMessage);
@@ -83,6 +95,7 @@ export default function Signup() {
       }
 
       try {
+        setProgressStep("evaluatingDecision");
         const decision = await evaluateDecision();
         setDecisionSession(decision);
       } catch {
@@ -90,6 +103,7 @@ export default function Signup() {
         notifyWarning(signupCopy.decisionWarningMessage);
       }
 
+      setProgressStep("finalizing");
       navigate(ROUTES.catalog, { replace: true });
     } catch (error) {
       notifyError(error instanceof Error ? error.message : signupCopy.fallbackErrorMessage);
@@ -122,6 +136,7 @@ export default function Signup() {
             name="fullName"
             autoComplete="name"
             value={fullName}
+            disabled={isSubmitting}
             onChange={(event) => setFullName(event.target.value)}
           />
           <AuthTextField
@@ -130,6 +145,7 @@ export default function Signup() {
             name="email"
             autoComplete="email"
             value={email}
+            disabled={isSubmitting}
             onChange={(event) => setEmail(event.target.value)}
           />
           <AuthTextField
@@ -138,6 +154,7 @@ export default function Signup() {
             name="password"
             autoComplete="new-password"
             value={password}
+            disabled={isSubmitting}
             onChange={(event) => setPassword(event.target.value)}
           />
           <AuthTextField
@@ -146,6 +163,7 @@ export default function Signup() {
             name="confirmPassword"
             autoComplete="new-password"
             value={confirmPassword}
+            disabled={isSubmitting}
             onChange={(event) => setConfirmPassword(event.target.value)}
           />
 
@@ -154,18 +172,20 @@ export default function Signup() {
             variant="contained"
             size="large"
             disabled={isSubmitting}
+            startIcon={isSubmitting ? <CircularProgress size={16} color="inherit" /> : undefined}
+            aria-busy={isSubmitting ? "true" : undefined}
             sx={{
               py: 1.25,
               borderRadius: 3,
               fontWeight: 800,
             }}
           >
-            {signupCopy.submitLabel}
+            {isSubmitting ? signupCopy.progress[progressStep] : signupCopy.submitLabel}
           </Button>
         </Stack>
 
         <Box sx={{ display: "flex", justifyContent: "center", pt: 0.5 }}>
-          <Button component={RouterLink} to={ROUTES.login} size="small" color="inherit">
+          <Button component={RouterLink} to={ROUTES.login} size="small" color="inherit" disabled={isSubmitting}>
             {signupCopy.loginCta}
           </Button>
         </Box>

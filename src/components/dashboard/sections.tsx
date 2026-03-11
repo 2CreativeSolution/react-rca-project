@@ -1,4 +1,6 @@
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
+import ChevronLeftRoundedIcon from "@mui/icons-material/ChevronLeftRounded";
+import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import {
   Alert,
   Box,
@@ -14,6 +16,7 @@ import {
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { keyframes } from "@mui/system";
+import { useEffect, useMemo, useState } from "react";
 import type { DashboardAsset, DashboardInsight, DashboardOrder, DashboardQuote, DashboardSummary } from "../../services/salesforceApi";
 import { formatCurrency, formatEta, mapStatusColor } from "./formatters";
 
@@ -107,6 +110,205 @@ function KpiCard({ title, value, helper }: { title: string; value: string; helpe
         <Typography color="text.secondary" variant="body2">
           {helper}
         </Typography>
+      </Stack>
+    </Paper>
+  );
+}
+
+type DashboardCarouselSlide = {
+  id: "quotes" | "assets";
+  title: string;
+  emptyLabel: string;
+  entries: Array<{
+    id: string;
+    primary: string;
+    secondary: string;
+    status: string | null;
+  }>;
+};
+
+function QuotesAssetsCarousel({
+  quotesPreview,
+  assetsPreview,
+}: {
+  quotesPreview: DashboardQuote[];
+  assetsPreview: DashboardAsset[];
+}) {
+  const slides = useMemo<DashboardCarouselSlide[]>(
+    () => [
+      {
+        id: "quotes",
+        title: "Quotes",
+        emptyLabel: "No quotes available.",
+        entries: quotesPreview.map((quote) => ({
+          id: quote.quoteId,
+          primary: quote.name ?? quote.quoteId,
+          secondary: formatCurrency(quote.totalAmount),
+          status: quote.status,
+        })),
+      },
+      {
+        id: "assets",
+        title: "Assets",
+        emptyLabel: "No assets available.",
+        entries: assetsPreview.map((asset) => ({
+          id: asset.assetId,
+          primary: asset.name ?? asset.assetId,
+          secondary: asset.productFamily ?? "Not available",
+          status: asset.status,
+        })),
+      },
+    ],
+    [assetsPreview, quotesPreview]
+  );
+
+  const [activeIndex, setActiveIndex] = useState(0);
+  const hasMultipleSlides = slides.length > 1;
+
+  useEffect(() => {
+    if (!hasMultipleSlides) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      setActiveIndex((previous) => (previous + 1) % slides.length);
+    }, 5_000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [hasMultipleSlides, slides.length]);
+
+  const normalizedActiveIndex = activeIndex % slides.length;
+
+  const goNext = () => {
+    setActiveIndex((previous) => (previous + 1) % slides.length);
+  };
+
+  const goPrevious = () => {
+    setActiveIndex((previous) => (previous - 1 + slides.length) % slides.length);
+  };
+
+  return (
+    <Paper
+      variant="outlined"
+      sx={(theme) => ({
+        borderRadius: 2,
+        p: 2,
+        background: `radial-gradient(860px 240px at 88% 0%, ${alpha(theme.palette.info.main, 0.13)} 0%, ${alpha(theme.palette.background.paper, 0.94)} 62%), radial-gradient(760px 220px at 12% 100%, ${alpha(theme.palette.primary.main, 0.11)} 0%, ${alpha(theme.palette.background.paper, 0.95)} 64%)`,
+      })}
+    >
+      <Stack spacing={1.2}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Typography variant="h6">Quotes & Assets</Typography>
+
+          <Stack direction="row" spacing={0.5}>
+            <IconButton
+              onClick={goPrevious}
+              disabled={!hasMultipleSlides}
+              color="primary"
+              size="small"
+              aria-label="Previous slide"
+              sx={{ border: 1, borderColor: "divider", bgcolor: "background.paper" }}
+            >
+              <ChevronLeftRoundedIcon fontSize="small" />
+            </IconButton>
+            <IconButton
+              onClick={goNext}
+              disabled={!hasMultipleSlides}
+              color="primary"
+              size="small"
+              aria-label="Next slide"
+              sx={{ border: 1, borderColor: "divider", bgcolor: "background.paper" }}
+            >
+              <ChevronRightRoundedIcon fontSize="small" />
+            </IconButton>
+          </Stack>
+        </Stack>
+
+        <Box sx={{ position: "relative", minHeight: 186 }}>
+          {slides.map((slide, index) => {
+            const isActive = index === normalizedActiveIndex;
+            const isBeforeActive = index < normalizedActiveIndex;
+            return (
+              <Paper
+                key={slide.id}
+                variant="outlined"
+                sx={{
+                  position: "absolute",
+                  inset: 0,
+                  borderRadius: 1.75,
+                  p: 1.2,
+                  transition: "transform 520ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity 460ms ease, filter 460ms ease",
+                  transform: isActive
+                    ? "translate3d(0, 0, 0) scale(1) rotateY(0deg)"
+                    : isBeforeActive
+                      ? "translate3d(-22px, 0, 0) scale(0.985) rotateY(7deg)"
+                      : "translate3d(22px, 0, 0) scale(0.985) rotateY(-7deg)",
+                  opacity: isActive ? 1 : 0,
+                  filter: isActive ? "none" : "blur(2px)",
+                  zIndex: isActive ? 2 : 1,
+                  pointerEvents: isActive ? "auto" : "none",
+                }}
+              >
+                <Stack spacing={1}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography variant="subtitle2">{slide.title}</Typography>
+                    <Chip size="small" variant="outlined" label={`${index + 1}/${slides.length}`} />
+                  </Stack>
+
+                  {slide.entries.length === 0 ? (
+                    <Typography color="text.secondary" variant="body2">
+                      {slide.emptyLabel}
+                    </Typography>
+                  ) : (
+                    slide.entries.map((entry) => (
+                      <Paper key={entry.id} variant="outlined" sx={{ borderRadius: 1.5, p: 1 }}>
+                        <Stack direction="row" justifyContent="space-between" spacing={1}>
+                          <Stack>
+                            <Typography variant="body2" fontWeight={700}>
+                              {entry.primary}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {entry.secondary}
+                            </Typography>
+                          </Stack>
+                          <Chip
+                            color={mapStatusColor(entry.status)}
+                            label={entry.status ?? "Not available"}
+                            size="small"
+                            variant="outlined"
+                          />
+                        </Stack>
+                      </Paper>
+                    ))
+                  )}
+                </Stack>
+              </Paper>
+            );
+          })}
+        </Box>
+
+        <Stack direction="row" spacing={0.7} justifyContent="center">
+          {slides.map((slide, index) => (
+            <Box
+              key={slide.id}
+              component="button"
+              type="button"
+              onClick={() => setActiveIndex(index)}
+              aria-label={`Go to ${slide.title} slide`}
+              sx={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                border: 0,
+                p: 0,
+                bgcolor: index === normalizedActiveIndex ? "primary.main" : "action.disabled",
+                cursor: "pointer",
+              }}
+            />
+          ))}
+        </Stack>
       </Stack>
     </Paper>
   );
@@ -297,57 +499,7 @@ export function DashboardContent({
 
       <Grid size={{ xs: 12, lg: 5 }}>
         <Stack spacing={1.5}>
-          <Paper variant="outlined" sx={{ borderRadius: 2, p: 2 }}>
-            <Stack spacing={1.2}>
-              <Typography variant="h6">Quotes</Typography>
-              {quotesPreview.length === 0 ? (
-                <Typography color="text.secondary" variant="body2">No quotes available.</Typography>
-              ) : (
-                quotesPreview.map((quote) => (
-                  <Paper key={quote.quoteId} variant="outlined" sx={{ borderRadius: 1.75, p: 1.2 }}>
-                    <Stack direction="row" justifyContent="space-between" spacing={1}>
-                      <Stack>
-                        <Typography variant="body2" fontWeight={700}>{quote.name ?? quote.quoteId}</Typography>
-                        <Typography variant="caption" color="text.secondary">{formatCurrency(quote.totalAmount)}</Typography>
-                      </Stack>
-                      <Chip
-                        color={mapStatusColor(quote.status)}
-                        label={quote.status ?? "Not available"}
-                        size="small"
-                        variant="outlined"
-                      />
-                    </Stack>
-                  </Paper>
-                ))
-              )}
-            </Stack>
-          </Paper>
-
-          <Paper variant="outlined" sx={{ borderRadius: 2, p: 2 }}>
-            <Stack spacing={1.2}>
-              <Typography variant="h6">Assets</Typography>
-              {assetsPreview.length === 0 ? (
-                <Typography color="text.secondary" variant="body2">No assets available.</Typography>
-              ) : (
-                assetsPreview.map((asset) => (
-                  <Paper key={asset.assetId} variant="outlined" sx={{ borderRadius: 1.75, p: 1.2 }}>
-                    <Stack direction="row" justifyContent="space-between" spacing={1}>
-                      <Stack>
-                        <Typography variant="body2" fontWeight={700}>{asset.name ?? asset.assetId}</Typography>
-                        <Typography variant="caption" color="text.secondary">{asset.productFamily ?? "Not available"}</Typography>
-                      </Stack>
-                      <Chip
-                        color={mapStatusColor(asset.status)}
-                        label={asset.status ?? "Not available"}
-                        size="small"
-                        variant="outlined"
-                      />
-                    </Stack>
-                  </Paper>
-                ))
-              )}
-            </Stack>
-          </Paper>
+          <QuotesAssetsCarousel quotesPreview={quotesPreview} assetsPreview={assetsPreview} />
 
           <Paper variant="outlined" sx={{ borderRadius: 2, p: 2 }}>
             <Stack spacing={1.2}>

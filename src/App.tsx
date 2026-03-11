@@ -26,6 +26,7 @@ import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import OrderStatus from "./pages/OrderStatus";
 import UserSettings from "./pages/UserSettings";
+import Orders from "./pages/Orders";
 
 function App() {
   return (
@@ -106,6 +107,15 @@ function App() {
               element={
                 <ProtectedRoute>
                   <OrderStatus />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path={ROUTES.orders}
+              element={
+                <ProtectedRoute>
+                  <Orders />
                 </ProtectedRoute>
               }
             />

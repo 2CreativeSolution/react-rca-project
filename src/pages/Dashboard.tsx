@@ -34,6 +34,8 @@ export default function Dashboard() {
       <DashboardContent
         orderHealth={viewModel.orderHealth}
         activationHighlights={viewModel.activationHighlights}
+        quotesTotal={viewModel.quotesTotal}
+        assetsTotal={viewModel.assetsTotal}
         quotesPreview={viewModel.quotesPreview}
         assetsPreview={viewModel.assetsPreview}
       />

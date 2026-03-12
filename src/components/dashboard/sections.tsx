@@ -124,6 +124,7 @@ type DashboardCarouselSlide = {
   id: "quotes" | "assets";
   title: string;
   emptyLabel: string;
+  totalCount: number;
   entries: Array<{
     id: string;
     primary: string;
@@ -133,9 +134,13 @@ type DashboardCarouselSlide = {
 };
 
 function QuotesAssetsCarousel({
+  quotesTotal,
+  assetsTotal,
   quotesPreview,
   assetsPreview,
 }: {
+  quotesTotal: number;
+  assetsTotal: number;
   quotesPreview: DashboardQuote[];
   assetsPreview: DashboardAsset[];
 }) {
@@ -145,6 +150,7 @@ function QuotesAssetsCarousel({
         id: "quotes",
         title: "Quotes",
         emptyLabel: "No quotes available.",
+        totalCount: quotesTotal,
         entries: quotesPreview.map((quote) => ({
           id: quote.quoteId,
           primary: quote.name ?? quote.quoteId,
@@ -156,6 +162,7 @@ function QuotesAssetsCarousel({
         id: "assets",
         title: "Assets",
         emptyLabel: "No assets available.",
+        totalCount: assetsTotal,
         entries: assetsPreview.map((asset) => ({
           id: asset.assetId,
           primary: asset.name ?? asset.assetId,
@@ -164,7 +171,7 @@ function QuotesAssetsCarousel({
         })),
       },
     ],
-    [assetsPreview, quotesPreview]
+    [assetsPreview, assetsTotal, quotesPreview, quotesTotal]
   );
 
   const [activeIndex, setActiveIndex] = useState(0);
@@ -231,7 +238,7 @@ function QuotesAssetsCarousel({
           </Stack>
         </Stack>
 
-        <Box sx={{ position: "relative", minHeight: 186 }}>
+        <Box sx={{ position: "relative", minHeight: 186, overflow: "hidden", borderRadius: 1.75 }}>
           {slides.map((slide, index) => {
             const isActive = index === normalizedActiveIndex;
             const isBeforeActive = index < normalizedActiveIndex;
@@ -244,6 +251,7 @@ function QuotesAssetsCarousel({
                   inset: 0,
                   borderRadius: 1.75,
                   p: 1.2,
+                  overflow: "hidden",
                   transition: "transform 520ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity 460ms ease, filter 460ms ease",
                   transform: isActive
                     ? "translate3d(0, 0, 0) scale(1) rotateY(0deg)"
@@ -259,7 +267,17 @@ function QuotesAssetsCarousel({
                 <Stack spacing={1}>
                   <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Typography variant="subtitle2">{slide.title}</Typography>
-                    <Chip size="small" variant="outlined" label={`${index + 1}/${slides.length}`} />
+                    <Stack direction="row" spacing={0.6} alignItems="center">
+                      {slide.totalCount > slide.entries.length ? (
+                        <Chip
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                          label={`+${slide.totalCount - slide.entries.length} more`}
+                        />
+                      ) : null}
+                      <Chip size="small" variant="outlined" label={`${index + 1}/${slides.length}`} />
+                    </Stack>
                   </Stack>
 
                   {slide.entries.length === 0 ? (
@@ -400,8 +418,8 @@ export function DashboardKpiStrip({
   return (
     <Grid container spacing={1.5}>
       {isLoading
-        ? Array.from({ length: 4 }).map((_, index) => (
-            <Grid key={index} size={{ xs: 12, sm: 6, lg: 3 }}>
+        ? Array.from({ length: 3 }).map((_, index) => (
+            <Grid key={index} size={{ xs: 12, sm: 6, lg: 4 }}>
               <Paper variant="outlined" sx={{ borderRadius: 2, p: 2 }}>
                 <Stack spacing={1}>
                   <Skeleton variant="text" width="45%" />
@@ -413,21 +431,18 @@ export function DashboardKpiStrip({
           ))
         : (
           <>
-            <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+            <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
               <KpiCard
                 title="Active Orders"
                 value={`${kpis?.activeOrders ?? 0}`}
                 helper={`${orderHealth.inProgressCount} in progress`}
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+            <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
               <KpiCard title="Total Quotes" value={`${kpis?.totalQuotes ?? 0}`} helper="Quotes from dashboard API" />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+            <Grid size={{ xs: 12, sm: 6, lg: 4 }}>
               <KpiCard title="Total Assets" value={`${kpis?.totalAssets ?? 0}`} helper="Assets tied to account" />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-              <KpiCard title="Revenue" value={formatCurrency(kpis?.totalRevenue ?? null)} helper="Reported cumulative revenue" />
             </Grid>
           </>
           )}
@@ -438,11 +453,15 @@ export function DashboardKpiStrip({
 export function DashboardContent({
   orderHealth,
   activationHighlights,
+  quotesTotal,
+  assetsTotal,
   quotesPreview,
   assetsPreview,
 }: {
   orderHealth: { inProgressCount: number; activeCount: number; pastCount: number };
   activationHighlights: DashboardOrder[];
+  quotesTotal: number;
+  assetsTotal: number;
   quotesPreview: DashboardQuote[];
   assetsPreview: DashboardAsset[];
 }) {
@@ -502,7 +521,12 @@ export function DashboardContent({
 
       <Grid size={{ xs: 12, lg: 5 }}>
         <Stack spacing={1.5}>
-          <QuotesAssetsCarousel quotesPreview={quotesPreview} assetsPreview={assetsPreview} />
+          <QuotesAssetsCarousel
+            quotesTotal={quotesTotal}
+            assetsTotal={assetsTotal}
+            quotesPreview={quotesPreview}
+            assetsPreview={assetsPreview}
+          />
 
           <Paper
             variant="outlined"

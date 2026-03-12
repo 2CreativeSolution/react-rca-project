@@ -99,6 +99,8 @@ export function useDashboardViewModel(accountId: string) {
     kpis,
     orderHealth,
     activationHighlights,
+    quotesTotal: quotes.length,
+    assetsTotal: assets.length,
     quotesPreview: quotes.slice(0, 2),
     assetsPreview: assets.slice(0, 2),
     insights,

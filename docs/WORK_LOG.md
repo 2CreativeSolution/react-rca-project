@@ -220,3 +220,11 @@ Keep entries outcome-focused. Prefer updating a single entry per feature/change 
   - Artifacts:
     - `src/components/dashboard/sections.tsx`
     - `src/pages/Dashboard.tsx`
+
+## 2026-03-12
+
+- Improved Quotes & Assets transparency by surfacing preview-vs-total counts per slide (`Showing X of Y`) and a `+N more` indicator whenever additional records exist beyond the first two shown in the dashboard carousel.
+  - Artifacts:
+    - `src/hooks/useDashboardViewModel.ts`
+    - `src/pages/Dashboard.tsx`
+    - `src/components/dashboard/sections.tsx`

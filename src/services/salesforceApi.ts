@@ -252,6 +252,76 @@ export type CartMutationResult = {
   message: string | null;
 };
 
+export type GetDashboardDataPayload = {
+  accountId: string;
+};
+
+export type DashboardSummary = {
+  activeOrders: number;
+  pastOrders: number;
+  totalAssets: number;
+  totalQuotes: number;
+  totalRevenue: number;
+};
+
+export type DashboardOrderFulfillment = {
+  completedSteps: number | null;
+  failedSteps: number | null;
+  hasFallout: boolean | null;
+  inProgressSteps: number | null;
+  planAgeHours: number | null;
+  planState: string | null;
+  priority: string | null;
+  progressPercent: number | null;
+  sourceType: string | null;
+  state: string | null;
+  totalSteps: number | null;
+};
+
+export type DashboardOrder = {
+  activationProgressPercent: number | null;
+  activationTime: string | null;
+  amount: number | null;
+  effectiveDate: string | null;
+  fulfillment: DashboardOrderFulfillment | null;
+  hoursRemaining: number | null;
+  isActivationEligible: boolean | null;
+  isActivationPending: boolean | null;
+  millisecondsRemaining: number | null;
+  minutesRemaining: number | null;
+  notes: string | null;
+  orderId: string;
+  status: string | null;
+};
+
+export type DashboardAsset = {
+  assetId: string;
+  name: string | null;
+  productFamily: string | null;
+  status: string | null;
+};
+
+export type DashboardQuote = {
+  name: string | null;
+  notes: string | null;
+  quoteId: string;
+  status: string | null;
+  totalAmount: number | null;
+};
+
+export type DashboardInsight = Record<string, unknown>;
+
+export type DashboardSnapshot = {
+  userId: string | null;
+  summary: DashboardSummary;
+  activeOrders: DashboardOrder[];
+  inProgressOrders: DashboardOrder[];
+  pastOrders: DashboardOrder[];
+  quotes: DashboardQuote[];
+  assets: DashboardAsset[];
+  aiInsights: DashboardInsight[];
+};
+
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === "object" && value !== null;
 }
@@ -275,6 +345,10 @@ function asNumberLike(value: unknown): number | null {
   }
 
   return null;
+}
+
+function asBooleanOrNull(value: unknown): boolean | null {
+  return typeof value === "boolean" ? value : null;
 }
 
 function collectCandidateRecords(raw: unknown): UnknownRecord[] {
@@ -1010,6 +1084,164 @@ function normalizeGetOrderStatusResult(raw: unknown): GetOrderStatusResult {
   };
 }
 
+function toDashboardSummary(value: unknown): DashboardSummary {
+  if (!isRecord(value)) {
+    return {
+      activeOrders: 0,
+      pastOrders: 0,
+      totalAssets: 0,
+      totalQuotes: 0,
+      totalRevenue: 0,
+    };
+  }
+
+  return {
+    activeOrders: asNumberLike(value.activeOrders) ?? 0,
+    pastOrders: asNumberLike(value.pastOrders) ?? 0,
+    totalAssets: asNumberLike(value.totalAssets) ?? 0,
+    totalQuotes: asNumberLike(value.totalQuotes) ?? 0,
+    totalRevenue: asNumberLike(value.totalRevenue) ?? 0,
+  };
+}
+
+function toDashboardFulfillment(value: unknown): DashboardOrderFulfillment | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  return {
+    completedSteps: asNumberLike(value.completedSteps),
+    failedSteps: asNumberLike(value.failedSteps),
+    hasFallout: asBooleanOrNull(value.hasFallout),
+    inProgressSteps: asNumberLike(value.inProgressSteps),
+    planAgeHours: asNumberLike(value.planAgeHours),
+    planState: asNonEmptyString(value.planState),
+    priority: asNonEmptyString(value.priority),
+    progressPercent: asNumberLike(value.progressPercent),
+    sourceType: asNonEmptyString(value.sourceType),
+    state: asNonEmptyString(value.state),
+    totalSteps: asNumberLike(value.totalSteps),
+  };
+}
+
+function toDashboardOrder(value: unknown): DashboardOrder | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const orderId = asNonEmptyString(value.orderId);
+  if (!orderId) {
+    return null;
+  }
+
+  return {
+    activationProgressPercent: asNumberLike(value.activationProgressPercent),
+    activationTime: asNonEmptyString(value.activationTime),
+    amount: asNumberLike(value.amount),
+    effectiveDate: asNonEmptyString(value.effectiveDate),
+    fulfillment: toDashboardFulfillment(value.fulfillment),
+    hoursRemaining: asNumberLike(value.hoursRemaining),
+    isActivationEligible: asBooleanOrNull(value.isActivationEligible),
+    isActivationPending: asBooleanOrNull(value.isActivationPending),
+    millisecondsRemaining: asNumberLike(value.millisecondsRemaining),
+    minutesRemaining: asNumberLike(value.minutesRemaining),
+    notes: asNonEmptyString(value.notes),
+    orderId,
+    status: asNonEmptyString(value.status),
+  };
+}
+
+function toDashboardQuote(value: unknown): DashboardQuote | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const quoteId = asNonEmptyString(value.quoteId);
+  if (!quoteId) {
+    return null;
+  }
+
+  return {
+    name: asNonEmptyString(value.name),
+    notes: asNonEmptyString(value.notes),
+    quoteId,
+    status: asNonEmptyString(value.status),
+    totalAmount: asNumberLike(value.totalAmount),
+  };
+}
+
+function toDashboardAsset(value: unknown): DashboardAsset | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const assetId = asNonEmptyString(value.assetId);
+  if (!assetId) {
+    return null;
+  }
+
+  return {
+    assetId,
+    name: asNonEmptyString(value.name),
+    productFamily: asNonEmptyString(value.productFamily),
+    status: asNonEmptyString(value.status),
+  };
+}
+
+function toDashboardInsights(value: unknown): DashboardInsight[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((entry): entry is DashboardInsight => isRecord(entry));
+}
+
+function toDashboardOrderList(value: unknown): DashboardOrder[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.map((entry) => toDashboardOrder(entry)).filter((entry): entry is DashboardOrder => Boolean(entry));
+}
+
+function normalizeDashboardResponse(raw: unknown): DashboardSnapshot {
+  if (!isRecord(raw)) {
+    throw new Error("Dashboard response is malformed.");
+  }
+
+  const userId = asNonEmptyString(raw.user);
+  const data = raw.data;
+  if (!isRecord(data) || data.success !== true) {
+    throw new Error("Dashboard response indicates failure.");
+  }
+
+  const result = data.result;
+  if (!isRecord(result)) {
+    throw new Error("Dashboard response is missing result data.");
+  }
+
+  const activeOrders = toDashboardOrderList(result.activeOrders);
+  const inProgressOrders = toDashboardOrderList(result.inProgressOrders);
+  const pastOrders = toDashboardOrderList(result.pastOrders);
+  const quotes = Array.isArray(result.quotes)
+    ? result.quotes.map((entry) => toDashboardQuote(entry)).filter((entry): entry is DashboardQuote => Boolean(entry))
+    : [];
+  const assets = Array.isArray(result.assets)
+    ? result.assets.map((entry) => toDashboardAsset(entry)).filter((entry): entry is DashboardAsset => Boolean(entry))
+    : [];
+
+  return {
+    userId,
+    summary: toDashboardSummary(result.summary),
+    activeOrders,
+    inProgressOrders,
+    pastOrders,
+    quotes,
+    assets,
+    aiInsights: toDashboardInsights(result.aiInsights),
+  };
+}
+
 export async function callIntegration<T, P = unknown>(
   endpoint: string,
   payload: P
@@ -1118,4 +1350,12 @@ export async function getOrderStatus(payload: GetOrderStatusPayload): Promise<Ge
     payload
   );
   return normalizeGetOrderStatusResult(response);
+}
+
+export async function getDashboardData(payload: GetDashboardDataPayload): Promise<DashboardSnapshot> {
+  const response = await callIntegration<unknown, GetDashboardDataPayload>(
+    INTEGRATION_ROUTES.getDashboardData,
+    payload
+  );
+  return normalizeDashboardResponse(response);
 }

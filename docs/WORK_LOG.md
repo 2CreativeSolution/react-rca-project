@@ -204,3 +204,19 @@ Keep entries outcome-focused. Prefer updating a single entry per feature/change 
     - `src/components/product/ProductDetailsDialog.tsx`
     - `src/pages/ProductLanding.tsx`
     - `src/constants/productContent.ts`
+
+## 2026-03-11
+
+- Completed uncommitted-change review for dashboard/orders additions, confirmed lint/build pass, and documented the current single-account SPA-session assumption directly in dashboard store request-deduping logic to guide future account-switch hardening.
+  - Artifacts:
+    - `src/store/dashboardStore.ts`
+
+- Upgraded dashboard order-health presentation by replacing snapshot wording with professional section labels and adding an animated Order Status Distribution visualization that grows vertical bars on mount using current in-progress/active/past counts from the dashboard view model, while removing redundant order-health summary cards.
+  - Artifacts:
+    - `src/components/dashboard/sections.tsx`
+    - `src/hooks/useDashboardViewModel.ts`
+
+- Updated AI Insights panel to a static "Coming soon." state and added a subtle animated spark border effect limited to that card.
+  - Artifacts:
+    - `src/components/dashboard/sections.tsx`
+    - `src/pages/Dashboard.tsx`

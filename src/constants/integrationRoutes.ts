@@ -11,4 +11,5 @@ export const INTEGRATION_ROUTES = {
   getOrderStatus: "/api/getOrderStatus",
   createDefaultQuote: "/api/createDefaultQuote",
   decisionApi: "/api/decisionapi",
+  getDashboardData: "/api/getDashboardData",
 } as const;

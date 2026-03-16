@@ -1,6 +1,7 @@
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
+import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import {
   AppBar,
   Avatar,
@@ -184,6 +185,17 @@ export default function Header() {
             >
               Catalog
             </Button>
+            <Button
+              component={RouterLink}
+              to={ROUTES.orders}
+              color="inherit"
+              sx={{
+                color: "text.secondary",
+                "&:hover": { bgcolor: "background.default" },
+              }}
+            >
+              Orders
+            </Button>
             <IconButton
               component={RouterLink}
               to={ROUTES.cart}
@@ -225,6 +237,12 @@ export default function Header() {
                   transformOrigin={{ horizontal: "right", vertical: "top" }}
                   anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
                 >
+                  <MenuItem component={RouterLink} to={ROUTES.dashboard} onClick={closeAccountMenu}>
+                    <ListItemIcon>
+                      <DashboardOutlinedIcon fontSize="small" />
+                    </ListItemIcon>
+                    Dashboard
+                  </MenuItem>
                   <MenuItem component={RouterLink} to={ROUTES.settings} onClick={closeAccountMenu}>
                     <ListItemIcon>
                       <SettingsOutlinedIcon fontSize="small" />

@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RCA Orders Overview</title>
+  <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+  <style>
+    :root {
+      --bg: #f6f8fc;
+      --surface: #fff;
+      --surface-soft: #f9fbff;
+      --text: #0f172a;
+      --muted: #5b6478;
+      --border: #e6eaf2;
+      --primary: #1d4ed8;
+      --success: #15803d;
+      --warn: #b45309;
+      --radius: 16px;
+      --shadow: 0 1px 2px rgba(15,23,42,.05), 0 10px 28px rgba(15,23,42,.06);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Plus Jakarta Sans", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1000px 340px at 0% -12%, rgba(29,78,216,.15), transparent 55%),
+        radial-gradient(900px 260px at 100% 0%, rgba(14,165,233,.1), transparent 50%),
+        var(--bg);
+    }
+    .page { max-width: 1240px; margin: 0 auto; padding: 36px 28px 56px; display: grid; gap: 18px; }
+    .top { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+    h1 { margin: 0; font-size: 31px; letter-spacing: -0.02em; line-height: 1.08; }
+    .sub { margin-top: 8px; color: var(--muted); font-size: 14px; }
+    .controls { display: flex; gap: 10px; }
+    .ctrl { background: #fff; border: 1px solid var(--border); border-radius: 999px; padding: 10px 14px; font-size: 13px; font-weight: 700; }
+
+    .tabs { display: flex; gap: 8px; }
+    .tab { border: 1px solid var(--border); border-radius: 999px; padding: 8px 12px; background: #fff; font-size: 12px; font-weight: 700; color: #334155; }
+    .tab.active { background: #e8f0ff; border-color: #bfd2ff; color: #1d4ed8; }
+
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; }
+    .table-head { display:grid; grid-template-columns: 1.5fr .9fr .9fr 1fr 1fr 1fr; gap: 10px; padding: 8px 10px; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+
+    .row {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+      background: var(--surface-soft);
+      display: grid;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .row-main { display:grid; grid-template-columns: 1.5fr .9fr .9fr 1fr 1fr 1fr; gap: 10px; align-items: center; }
+    .row strong { font-size: 13px; }
+    .meta { color: var(--muted); font-size: 12px; }
+    .chip { border: 1px solid; border-radius: 999px; padding: 4px 9px; font-size: 11px; font-weight: 700; justify-self: start; }
+    .chip.warn { color: var(--warn); border-color: rgba(180,83,9,.28); background: rgba(180,83,9,.08); }
+    .chip.ok { color: var(--success); border-color: rgba(21,128,61,.28); background: rgba(21,128,61,.08); }
+    .chip.neutral { color: #1d4ed8; border-color: rgba(29,78,216,.28); background: rgba(29,78,216,.08); }
+
+    .expand {
+      border-top: 1px dashed #d8deed;
+      padding-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .mini { border: 1px solid var(--border); border-radius: 10px; background: #fff; padding: 8px; }
+    .mini .k { color: var(--muted); font-size: 11px; }
+    .mini .v { margin-top: 3px; font-size: 13px; font-weight: 700; }
+
+    @media (max-width: 1040px) {
+      .table-head, .row-main { grid-template-columns: 1fr 1fr; }
+      .expand { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="top">
+      <div>
+        <h1>Orders Overview</h1>
+        <div class="sub">Read-only operational view from dashboard API data</div>
+      </div>
+      <div class="controls">
+        <button class="ctrl">Filter</button>
+        <button class="ctrl">Sort</button>
+        <button class="ctrl">Refresh</button>
+      </div>
+    </header>
+
+    <section class="tabs">
+      <button class="tab active">In Progress (1)</button>
+      <button class="tab">Active (2)</button>
+      <button class="tab">Past (0)</button>
+    </section>
+
+    <section class="card">
+      <div class="table-head">
+        <div>Order</div><div>Status</div><div>Amount</div><div>Effective Date</div><div>Activation</div><div>Fulfillment</div>
+      </div>
+
+      <article class="row">
+        <div class="row-main">
+          <div><strong>801au...KuzAAF</strong><div class="meta">Draft order with pending activation</div></div>
+          <div><span class="chip neutral">Draft</span></div>
+          <div><strong>$95</strong></div>
+          <div>2026-02-27</div>
+          <div><strong>2%</strong><div class="meta">ETA 23h • 26m</div></div>
+          <div><span class="chip neutral">Pending</span></div>
+        </div>
+        <div class="expand">
+          <div class="mini"><div class="k">Completed Steps</div><div class="v">0 / 0</div></div>
+          <div class="mini"><div class="k">In Progress Steps</div><div class="v">0</div></div>
+          <div class="mini"><div class="k">Failed Steps</div><div class="v">0</div></div>
+          <div class="mini"><div class="k">Has Fallout</div><div class="v">No</div></div>
+        </div>
+      </article>
+
+      <article class="row">
+        <div class="row-main">
+          <div><strong>801au...EG6AAN</strong><div class="meta">Activated order</div></div>
+          <div><span class="chip ok">Activated</span></div>
+          <div><strong>$60</strong></div>
+          <div>2026-02-27</div>
+          <div><strong>-</strong><div class="meta">No activation ETA</div></div>
+          <div><span class="chip warn">Delayed • 26%</span></div>
+        </div>
+        <div class="expand">
+          <div class="mini"><div class="k">Completed Steps</div><div class="v">4 / 15</div></div>
+          <div class="mini"><div class="k">In Progress Steps</div><div class="v">0</div></div>
+          <div class="mini"><div class="k">Failed Steps</div><div class="v">0</div></div>
+          <div class="mini"><div class="k">Has Fallout</div><div class="v">No</div></div>
+        </div>
+      </article>
+
+      <article class="row">
+        <div class="row-main">
+          <div><strong>801au...IumAAF</strong><div class="meta">Activated order</div></div>
+          <div><span class="chip ok">Activated</span></div>
+          <div><strong>$110</strong></div>
+          <div>2026-02-27</div>
+          <div><strong>-</strong><div class="meta">No activation ETA</div></div>
+          <div><span class="chip warn">Delayed • 9%</span></div>
+        </div>
+        <div class="expand">
+          <div class="mini"><div class="k">Completed Steps</div><div class="v">4 / 44</div></div>
+          <div class="mini"><div class="k">In Progress Steps</div><div class="v">0</div></div>
+          <div class="mini"><div class="k">Failed Steps</div><div class="v">0</div></div>
+          <div class="mini"><div class="k">Has Fallout</div><div class="v">No</div></div>
+        </div>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

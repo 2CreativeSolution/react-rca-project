@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RCA Dashboard Mock</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --surface: #ffffff;
+      --border: #e5e9f1;
+      --text: #0f172a;
+      --muted: #5b6578;
+      --primary: #1f6feb;
+      --success: #15803d;
+      --warning: #b45309;
+      --danger: #b91c1c;
+      --radius: 16px;
+      --shadow: 0 1px 2px rgba(16,24,40,.05), 0 8px 24px rgba(16,24,40,.06);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 380px at -10% -15%, rgba(31,111,235,.14), transparent 58%),
+        radial-gradient(1000px 260px at 110% 10%, rgba(14,165,233,.10), transparent 52%),
+        var(--bg);
+    }
+    .page {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 40px 28px 56px;
+      display: grid;
+      gap: 24px;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 32px;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+    .sub {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .pill {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 999px;
+      padding: 8px 14px;
+      color: #1e293b;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: var(--shadow);
+    }
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+    .kpi-title { color: var(--muted); font-size: 13px; }
+    .kpi-value { margin-top: 8px; font-size: 34px; letter-spacing: -0.02em; font-weight: 700; }
+    .kpi-meta { margin-top: 6px; font-size: 12px; color: #667085; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 16px;
+    }
+    .panel-title {
+      margin: 0 0 14px;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .rows { display: grid; gap: 10px; }
+    .row {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: grid;
+      gap: 8px;
+      background: #fcfdff;
+    }
+    .row-main { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .row-title { font-size: 14px; font-weight: 600; }
+    .row-meta { color: var(--muted); font-size: 12px; }
+    .chip {
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 5px 10px;
+      border: 1px solid;
+      white-space: nowrap;
+    }
+    .chip.success { color: var(--success); border-color: rgba(21,128,61,.28); background: rgba(21,128,61,.08); }
+    .chip.warn { color: var(--warning); border-color: rgba(180,83,9,.28); background: rgba(180,83,9,.08); }
+    .chip.draft { color: var(--primary); border-color: rgba(31,111,235,.28); background: rgba(31,111,235,.08); }
+
+    .progress-wrap { display: grid; gap: 6px; }
+    .progress-label { font-size: 11px; color: #64748b; }
+    .bar { height: 8px; border-radius: 999px; background: #e9eef8; overflow: hidden; }
+    .bar > span { display: block; height: 100%; background: linear-gradient(90deg, #1f6feb, #0ea5e9); }
+
+    .stack { display: grid; gap: 16px; }
+    .small-list { display: grid; gap: 8px; }
+    .small-item {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #fcfdff;
+    }
+    .muted { color: var(--muted); font-size: 12px; }
+    .value { font-weight: 600; font-size: 13px; }
+
+    @media (max-width: 1080px) {
+      .kpis { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+  <main class="page">
+    <section class="topbar">
+      <div>
+        <h1>Customer Dashboard</h1>
+        <div class="sub">Live account summary across quotes, orders, and assets</div>
+      </div>
+      <div class="pill">Last updated: 2 min ago</div>
+    </section>
+
+    <section class="kpis">
+      <article class="card"><div class="kpi-title">Active Orders</div><div class="kpi-value">3</div><div class="kpi-meta">2 delayed, 1 draft in flight</div></article>
+      <article class="card"><div class="kpi-title">Total Quotes</div><div class="kpi-value">4</div><div class="kpi-meta">3 accepted, 1 draft</div></article>
+      <article class="card"><div class="kpi-title">Installed Assets</div><div class="kpi-value">2</div><div class="kpi-meta">Service family products</div></article>
+      <article class="card"><div class="kpi-title">Revenue</div><div class="kpi-value">$0</div><div class="kpi-meta">No billed revenue yet</div></article>
+    </section>
+
+    <section class="grid">
+      <div class="stack">
+        <article class="card">
+          <h2 class="panel-title">In Progress Orders</h2>
+          <div class="rows">
+            <div class="row">
+              <div class="row-main">
+                <div>
+                  <div class="row-title">Order 801au...KuzAAF</div>
+                  <div class="row-meta">Effective date: 2026-02-27 • Amount: $95</div>
+                </div>
+                <span class="chip draft">Draft</span>
+              </div>
+              <div class="progress-wrap">
+                <div class="progress-label">Activation progress: 2%</div>
+                <div class="bar"><span style="width: 2%"></span></div>
+              </div>
+              <div class="row-meta">Pending • ETA: 23h (26m)</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2 class="panel-title">Active Orders</h2>
+          <div class="rows">
+            <div class="row">
+              <div class="row-main">
+                <div><div class="row-title">801au...EG6AAN</div><div class="row-meta">Activated • Amount: $60</div></div>
+                <span class="chip warn">Delayed</span>
+              </div>
+              <div class="progress-wrap"><div class="progress-label">Fulfillment: 26%</div><div class="bar"><span style="width: 26%"></span></div></div>
+            </div>
+            <div class="row">
+              <div class="row-main">
+                <div><div class="row-title">801au...IumAAF</div><div class="row-meta">Activated • Amount: $110</div></div>
+                <span class="chip warn">Delayed</span>
+              </div>
+              <div class="progress-wrap"><div class="progress-label">Fulfillment: 9%</div><div class="bar"><span style="width: 9%"></span></div></div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <aside class="stack">
+        <article class="card">
+          <h2 class="panel-title">Assets</h2>
+          <div class="small-list">
+            <div class="small-item"><div><div class="value">Wifi Router</div><div class="muted">Service</div></div><span class="chip.success chip">Installed</span></div>
+            <div class="small-item"><div><div class="value">Internet</div><div class="muted">Service</div></div><span class="chip draft chip">Registered</span></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2 class="panel-title">Quotes</h2>
+          <div class="small-list">
+            <div class="small-item"><div><div class="value">Dashboard Testing Quote Only</div><div class="muted">$195</div></div><span class="chip draft chip">Draft</span></div>
+            <div class="small-item"><div><div class="value">Quote to Order Conversion 3</div><div class="muted">$95</div></div><span class="chip success chip">Accepted</span></div>
+            <div class="small-item"><div><div class="value">Quote to Order Conversion 2</div><div class="muted">$60</div></div><span class="chip success chip">Accepted</span></div>
+            <div class="small-item"><div><div class="value">Quote to Order Conversion</div><div class="muted">$110</div></div><span class="chip success chip">Accepted</span></div>
+          </div>
+        </article>
+      </aside>
+    </section>
+  </main>
+</body>
+</html>

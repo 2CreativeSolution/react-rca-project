@@ -11,6 +11,7 @@ export const ROUTES = {
   privacy: "/privacy",
   catalog: "/catalog",
   dashboard: "/dashboard",
+  orders: "/orders",
   products: "/products",
   productDetail: "/products/:id",
   cart: "/cart",

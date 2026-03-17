@@ -4,6 +4,7 @@ import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import {
   Alert,
   Box,
+  Button,
   Chip,
   Grid,
   IconButton,
@@ -17,10 +18,12 @@ import {
 import { alpha } from "@mui/material/styles";
 import { keyframes } from "@mui/system";
 import { useEffect, useMemo, useState } from "react";
+import { PRODUCT_COPY } from "../../constants/productContent";
 import type { DashboardAsset, DashboardOrder, DashboardQuote, DashboardSummary } from "../../services/salesforceApi";
 import { formatCurrency, formatEta, mapStatusColor } from "./formatters";
 
 const ETA_TEXT_COLOR = "#0F4C81";
+const dashboardCopy = PRODUCT_COPY.dashboard;
 const insightsBorderSpark = keyframes`
   to {
     transform: rotate(1turn);
@@ -341,11 +344,19 @@ export function DashboardHeaderActions({
   fetchedAtLabel,
   isRefreshing,
   disableRefresh,
+  showCreateQuote,
+  isCreatingQuote,
+  disableCreateQuote,
+  onCreateQuote,
   onRefresh,
 }: {
   fetchedAtLabel: string;
   isRefreshing: boolean;
   disableRefresh: boolean;
+  showCreateQuote: boolean;
+  isCreatingQuote: boolean;
+  disableCreateQuote: boolean;
+  onCreateQuote: () => Promise<void>;
   onRefresh: () => Promise<void>;
 }) {
   return (
@@ -360,17 +371,37 @@ export function DashboardHeaderActions({
       >
         <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2}>
           <Stack spacing={0.8}>
-            <Typography variant="h4">Executive Dashboard</Typography>
+            <Typography variant="h4">{dashboardCopy.title}</Typography>
             <Typography color="text.secondary" variant="body2">
-              High-level health across orders, quotes, assets, and account momentum.
+              {dashboardCopy.subtitle}
             </Typography>
             <Typography color="text.secondary" variant="caption">
-              Last updated: {fetchedAtLabel}
+              {dashboardCopy.lastUpdatedLabel}: {fetchedAtLabel}
             </Typography>
           </Stack>
 
           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-            <Tooltip title="Refresh">
+            {showCreateQuote ? (
+              <Button
+                variant="contained"
+                color="primary"
+                size="small"
+                disableElevation
+                onClick={onCreateQuote}
+                disabled={isCreatingQuote || disableCreateQuote}
+                sx={{
+                  height: 34,
+                  minWidth: 0,
+                  px: 1.25,
+                  borderRadius: 2,
+                  textTransform: "none",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {isCreatingQuote ? dashboardCopy.creatingQuoteLabel : dashboardCopy.createQuoteLabel}
+              </Button>
+            ) : null}
+            <Tooltip title={dashboardCopy.refreshTooltipLabel}>
               <span>
                 <IconButton
                   onClick={onRefresh}

@@ -99,6 +99,20 @@ export const PRODUCT_COPY = {
       categoriesAsc: "Categories (low-high)",
     },
   },
+  dashboard: {
+    title: "Executive Dashboard",
+    subtitle: "High-level health across orders, quotes, assets, and account momentum.",
+    lastUpdatedLabel: "Last updated",
+    refreshTooltipLabel: "Refresh",
+    createQuoteLabel: "Create New Quote",
+    creatingQuoteLabel: "Creating...",
+    missingIdentityWarningMessage: "Account identity is unavailable. Please retry RCA sync from settings.",
+    createQuoteFailureWarningMessage: "Unable to create a default quote right now.",
+    decisionRefreshWarningMessage: "Quote created, but active quote status could not be refreshed. Please try again.",
+    missingActiveQuoteWarningMessage:
+      "Quote created, but no active cart quote is available yet. Please refresh and try again.",
+    createQuoteSuccessMessage: "Quote created successfully. Redirecting to cart.",
+  },
   cart: {
     title: "Cart",
     quoteLabel: "Quote",

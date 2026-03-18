@@ -220,3 +220,28 @@ Keep entries outcome-focused. Prefer updating a single entry per feature/change 
   - Artifacts:
     - `src/components/dashboard/sections.tsx`
     - `src/pages/Dashboard.tsx`
+
+## 2026-03-12
+
+- Improved Quotes & Assets transparency by surfacing preview-vs-total counts per slide (`Showing X of Y`) and a `+N more` indicator whenever additional records exist beyond the first two shown in the dashboard carousel.
+  - Artifacts:
+    - `src/hooks/useDashboardViewModel.ts`
+    - `src/pages/Dashboard.tsx`
+    - `src/components/dashboard/sections.tsx`
+
+## 2026-03-17
+
+- Added a dashboard hero CTA to create a default quote when no active quote exists, reusing existing auth quote-creation flow, refreshing decision state after creation, and redirecting successful creations to cart.
+  - Artifacts:
+    - `src/pages/Dashboard.tsx`
+    - `src/components/dashboard/sections.tsx`
+    - `src/constants/productContent.ts`
+
+- Redesigned dashboard activation milestones to use fulfillment-first triage (delayed/overdue-aware ranking), surfaced top actionable fulfillment steps with progress/plan metrics, and replaced AI Insights placeholder content with typed message/priority/type rendering from API data.
+  - Artifacts:
+    - `src/services/salesforceApi.ts`
+    - `src/store/dashboardStore.ts`
+    - `src/hooks/useDashboardViewModel.ts`
+    - `src/components/dashboard/sections.tsx`
+    - `src/pages/Dashboard.tsx`
+    - `src/constants/productContent.ts`

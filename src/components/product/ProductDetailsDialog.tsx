@@ -210,7 +210,8 @@ export default function ProductDetailsDialog({
                           width: "100%",
                           minHeight: { xs: 220, sm: 280 },
                           maxHeight: { xs: 280, sm: 330 },
-                          objectFit: "cover",
+                          objectFit: "contain",
+                          objectPosition: "center",
                           display: "block",
                         }}
                       />

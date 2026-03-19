@@ -7,7 +7,6 @@ import {
   AccordionDetails,
   AccordionSummary,
   Alert,
-  Button,
   Box,
   Chip,
   IconButton,
@@ -19,93 +18,11 @@ import {
   Typography,
   Tooltip,
 } from "@mui/material";
-import { alpha } from "@mui/material/styles";
-import { useMemo, useState } from "react";
-import type { DashboardOrder, DashboardOrderFulfillmentStep } from "../../services/salesforceApi";
+import type { DashboardOrder } from "../../services/salesforceApi";
 import type { OrderBucket } from "../../store/dashboardStore";
 import { formatCurrency, formatDate, formatDateTime, formatEta, formatProgress, mapStatusColor } from "../dashboard/formatters";
 
 const ETA_TEXT_COLOR = "#0F4C81";
-const DEFAULT_VISIBLE_TIMELINE_STEPS = 6;
-
-function toSortableTimestamp(value: string | null): number {
-  if (!value) {
-    return Number.POSITIVE_INFINITY;
-  }
-
-  const parsed = Date.parse(value);
-  return Number.isNaN(parsed) ? Number.POSITIVE_INFINITY : parsed;
-}
-
-function sortStepsByPlannedTime(steps: DashboardOrderFulfillmentStep[]): DashboardOrderFulfillmentStep[] {
-  return [...steps].sort((left, right) => {
-    const plannedDifference =
-      toSortableTimestamp(left.plannedCompletionDate) - toSortableTimestamp(right.plannedCompletionDate);
-    if (plannedDifference !== 0) {
-      return plannedDifference;
-    }
-
-    const startedDifference = toSortableTimestamp(left.actualStartDate) - toSortableTimestamp(right.actualStartDate);
-    if (startedDifference !== 0) {
-      return startedDifference;
-    }
-
-    return (left.name ?? "").localeCompare(right.name ?? "");
-  });
-}
-
-type TimelineVisualState = {
-  chipColor: "success" | "warning" | "error" | "info" | "default";
-  dotColor: string;
-  lineColor: string;
-};
-
-function normalizeText(value: string | null | undefined): string {
-  return value?.trim().toLowerCase() ?? "";
-}
-
-function getTimelineVisualState(step: DashboardOrderFulfillmentStep): TimelineVisualState {
-  const normalizedState = normalizeText(step.state);
-  const normalizedJeopardy = normalizeText(step.jeopardyStatus);
-
-  if (normalizedState.includes("complet")) {
-    return {
-      chipColor: "success",
-      dotColor: "success.main",
-      lineColor: alpha("#2e7d32", 0.35),
-    };
-  }
-
-  if (normalizedState.includes("inprogress") || normalizedState.includes("in progress")) {
-    return {
-      chipColor: "warning",
-      dotColor: "warning.main",
-      lineColor: alpha("#ed6c02", 0.35),
-    };
-  }
-
-  if (normalizedState.includes("fail") || normalizedJeopardy.includes("overdue")) {
-    return {
-      chipColor: "error",
-      dotColor: "error.main",
-      lineColor: alpha("#d32f2f", 0.35),
-    };
-  }
-
-  if (normalizedState.includes("pending")) {
-    return {
-      chipColor: "info",
-      dotColor: "info.main",
-      lineColor: alpha("#0288d1", 0.3),
-    };
-  }
-
-  return {
-    chipColor: "default",
-    dotColor: "text.disabled",
-    lineColor: alpha("#9e9e9e", 0.28),
-  };
-}
 
 export function OrdersHeader({
   disableRefresh,
@@ -276,14 +193,6 @@ export function OrdersTabsBar({
 }
 
 function OrderDetailsGrid({ order }: { order: DashboardOrder }) {
-  const [showAllTimelineSteps, setShowAllTimelineSteps] = useState(false);
-  const fulfillmentSteps = useMemo(
-    () => sortStepsByPlannedTime(order.fulfillment?.steps ?? []),
-    [order.fulfillment?.steps]
-  );
-  const hasMoreSteps = fulfillmentSteps.length > DEFAULT_VISIBLE_TIMELINE_STEPS;
-  const visibleSteps = showAllTimelineSteps ? fulfillmentSteps : fulfillmentSteps.slice(0, DEFAULT_VISIBLE_TIMELINE_STEPS);
-
   return (
     <Stack spacing={1.2}>
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
@@ -315,126 +224,31 @@ function OrderDetailsGrid({ order }: { order: DashboardOrder }) {
           </Stack>
         </AccordionSummary>
         <AccordionDetails>
-          <Stack direction="row" spacing={1.25} useFlexGap flexWrap="wrap">
-            <Stack direction="row" alignItems="center" spacing={0.6}>
-              <Box sx={{ width: 7, height: 7, borderRadius: "50%", bgcolor: "success.main" }} />
-              <Typography variant="caption" color="text.secondary">
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+            <Paper variant="outlined" sx={{ borderRadius: 1.5, p: 1, flex: 1 }}>
+              <Typography variant="caption" color="text.secondary">Fulfillment steps</Typography>
+              <Typography variant="body2">
                 {order.fulfillment?.completedSteps ?? "—"} / {order.fulfillment?.totalSteps ?? "—"}
               </Typography>
-            </Stack>
-            <Stack direction="row" alignItems="center" spacing={0.6}>
-              <Box sx={{ width: 7, height: 7, borderRadius: "50%", bgcolor: "warning.main" }} />
-              <Typography variant="caption" color="text.secondary">
-                {order.fulfillment?.inProgressSteps ?? "—"}
+            </Paper>
+            <Paper variant="outlined" sx={{ borderRadius: 1.5, p: 1, flex: 1 }}>
+              <Typography variant="caption" color="text.secondary">In progress steps</Typography>
+              <Typography variant="body2">{order.fulfillment?.inProgressSteps ?? "—"}</Typography>
+            </Paper>
+            <Paper variant="outlined" sx={{ borderRadius: 1.5, p: 1, flex: 1 }}>
+              <Typography variant="caption" color="text.secondary">Failed steps</Typography>
+              <Typography variant="body2">{order.fulfillment?.failedSteps ?? "—"}</Typography>
+            </Paper>
+            <Paper variant="outlined" sx={{ borderRadius: 1.5, p: 1, flex: 1 }}>
+              <Typography variant="caption" color="text.secondary">Has fallout</Typography>
+              <Typography variant="body2">
+                {order.fulfillment?.hasFallout === null || order.fulfillment?.hasFallout === undefined
+                  ? "Not available"
+                  : order.fulfillment.hasFallout
+                    ? "Yes"
+                    : "No"}
               </Typography>
-            </Stack>
-            <Stack direction="row" alignItems="center" spacing={0.6}>
-              <Box sx={{ width: 7, height: 7, borderRadius: "50%", bgcolor: "error.main" }} />
-              <Typography variant="caption" color="text.secondary">
-                {order.fulfillment?.failedSteps ?? "—"}
-              </Typography>
-            </Stack>
-            <Stack direction="row" alignItems="center" spacing={0.6}>
-              <Box
-                sx={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: "50%",
-                  bgcolor:
-                    order.fulfillment?.hasFallout === null || order.fulfillment?.hasFallout === undefined
-                      ? "text.disabled"
-                      : order.fulfillment.hasFallout
-                        ? "error.main"
-                        : "success.main",
-                }}
-              />
-              <Typography variant="caption" color="text.secondary">
-                {
-                  order.fulfillment?.hasFallout === null || order.fulfillment?.hasFallout === undefined
-                    ? "Not available"
-                    : order.fulfillment.hasFallout
-                      ? "Yes"
-                      : "No"
-                }
-              </Typography>
-            </Stack>
-          </Stack>
-
-          <Stack spacing={1} sx={{ mt: 1.2 }}>
-            <Typography variant="caption" color="text.secondary">Timeline (planned order)</Typography>
-            {visibleSteps.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                No step timeline returned for this order state yet.
-              </Typography>
-            ) : (
-              <Stack spacing={0.9}>
-                {visibleSteps.map((step, index) => {
-                  const isLast = index === visibleSteps.length - 1;
-                  const timelineVisualState = getTimelineVisualState(step);
-                  return (
-                    <Box key={step.id ?? `${step.name ?? "step"}-${index}`} sx={{ display: "flex", gap: 1.1 }}>
-                      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", width: 12, pt: 0.45 }}>
-                        <Box
-                          sx={{
-                            width: 7,
-                            height: 7,
-                            borderRadius: "50%",
-                            bgcolor: timelineVisualState.dotColor,
-                          }}
-                        />
-                        {!isLast ? (
-                          <Box
-                            sx={{
-                              mt: 0.35,
-                              width: 0.75,
-                              flex: 1,
-                              minHeight: 16,
-                              bgcolor: timelineVisualState.lineColor,
-                              borderRadius: 999,
-                            }}
-                          />
-                        ) : null}
-                      </Box>
-                      <Paper variant="outlined" sx={{ borderRadius: 1.5, px: 1, py: 0.8, flex: 1 }}>
-                        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
-                          <Typography variant="body2" fontWeight={600}>
-                            {step.name ?? "Unnamed step"}
-                          </Typography>
-                          <Tooltip title={step.state ?? "Not available"}>
-                            <Box
-                              sx={{
-                                width: 6,
-                                height: 6,
-                                borderRadius: "50%",
-                                bgcolor: timelineVisualState.dotColor,
-                              }}
-                            />
-                          </Tooltip>
-                        </Stack>
-                        <Typography variant="caption" color="text.secondary">
-                          {(step.stepType ?? "Step")} • {step.jeopardyStatus ?? "No jeopardy"}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.2 }}>
-                          Planned: {formatDateTime(step.plannedCompletionDate)}
-                        </Typography>
-                      </Paper>
-                    </Box>
-                  );
-                })}
-              </Stack>
-            )}
-            {hasMoreSteps ? (
-              <Box>
-                <Button
-                  size="small"
-                  variant="text"
-                  onClick={() => setShowAllTimelineSteps((previous) => !previous)}
-                  sx={{ px: 0, minWidth: "auto" }}
-                >
-                  {showAllTimelineSteps ? "Show fewer steps" : `Show all steps (${fulfillmentSteps.length})`}
-                </Button>
-              </Box>
-            ) : null}
+            </Paper>
           </Stack>
         </AccordionDetails>
       </Accordion>

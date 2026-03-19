@@ -5,12 +5,9 @@ import {
   selectAiInsights,
   selectAssets,
   selectKpis,
-  selectMilestoneProgressPercent,
-  selectOrderAtRisk,
   selectOrdersByBucket,
-  selectOrdersSortedForMilestones,
   selectQuotes,
-  selectTopActionableFulfillmentSteps,
+  selectOrdersSortedByUrgency,
   useDashboardStore,
 } from "../store/dashboardStore";
 import type { DashboardOrder } from "../services/salesforceApi";
@@ -90,13 +87,8 @@ export function useDashboardViewModel(accountId: string) {
   );
 
   const activationHighlights = useMemo(() => {
-    const prioritizedOrders = selectOrdersSortedForMilestones([...inProgressOrders, ...activeOrders]).slice(0, 2);
-    return prioritizedOrders.map((order) => ({
-      order,
-      isAtRisk: selectOrderAtRisk(order),
-      progressPercent: selectMilestoneProgressPercent(order),
-      topSteps: selectTopActionableFulfillmentSteps(order, 3),
-    }));
+    const prioritizedOrders = selectOrdersSortedByUrgency([...inProgressOrders, ...activeOrders]);
+    return prioritizedOrders.slice(0, 2);
   }, [activeOrders, inProgressOrders]);
 
   return {

@@ -4,7 +4,6 @@ import {
   type DashboardAsset,
   type DashboardInsight,
   type DashboardOrder,
-  type DashboardOrderFulfillmentStep,
   type DashboardQuote,
   type DashboardSnapshot,
   type DashboardSummary,
@@ -50,74 +49,6 @@ function asTimestamp(value: string | null): number {
 
   const parsed = Date.parse(value);
   return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function normalizeText(value: string | null | undefined): string {
-  return value?.trim().toLowerCase() ?? "";
-}
-
-function isDelayedState(order: DashboardOrder): boolean {
-  const state = normalizeText(order.fulfillment?.state ?? order.status);
-  return state.includes("delay");
-}
-
-function isOverdueStep(step: DashboardOrderFulfillmentStep): boolean {
-  return normalizeText(step.jeopardyStatus).includes("overdue");
-}
-
-function isInProgressStep(step: DashboardOrderFulfillmentStep): boolean {
-  // Salesforce state labels can be "In Progress"/"IN_PROGRESS"; normalize checks to avoid deprioritizing active steps.
-  return normalizeText(step.state).includes("inprogress");
-}
-
-function isPendingStep(step: DashboardOrderFulfillmentStep): boolean {
-  return normalizeText(step.state).includes("pending");
-}
-
-function getStepUrgencyScore(step: DashboardOrderFulfillmentStep): number {
-  if (isOverdueStep(step)) {
-    return 0;
-  }
-  if (isInProgressStep(step)) {
-    return 1;
-  }
-  if (isPendingStep(step)) {
-    return 2;
-  }
-  return 3;
-}
-
-function getOverdueStepCount(order: DashboardOrder): number {
-  return order.fulfillment?.steps.filter((step) => isOverdueStep(step)).length ?? 0;
-}
-
-export function selectTopActionableFulfillmentSteps(
-  order: DashboardOrder,
-  limit = 3
-): DashboardOrderFulfillmentStep[] {
-  const steps = order.fulfillment?.steps ?? [];
-  if (steps.length === 0 || limit <= 0) {
-    return [];
-  }
-
-  return [...steps]
-    .sort((a, b) => {
-      const scoreDiff = getStepUrgencyScore(a) - getStepUrgencyScore(b);
-      if (scoreDiff !== 0) {
-        return scoreDiff;
-      }
-
-      return asTimestamp(a.plannedCompletionDate) - asTimestamp(b.plannedCompletionDate);
-    })
-    .slice(0, limit);
-}
-
-export function selectMilestoneProgressPercent(order: DashboardOrder): number | null {
-  return order.fulfillment?.progressPercent ?? order.activationProgressPercent;
-}
-
-export function selectOrderAtRisk(order: DashboardOrder): boolean {
-  return isDelayedState(order) || getOverdueStepCount(order) > 0;
 }
 
 function isFreshEnough(fetchedAt: string | null): boolean {
@@ -330,35 +261,6 @@ export function selectOrdersSortedByUrgency(orders: DashboardOrder[]): Dashboard
     const aDate = asTimestamp(a.effectiveDate);
     const bDate = asTimestamp(b.effectiveDate);
     return bDate - aDate;
-  });
-}
-
-export function selectOrdersSortedForMilestones(orders: DashboardOrder[]): DashboardOrder[] {
-  return [...orders].sort((a, b) => {
-    const aDelayedRank = isDelayedState(a) ? 0 : 1;
-    const bDelayedRank = isDelayedState(b) ? 0 : 1;
-    if (aDelayedRank !== bDelayedRank) {
-      return aDelayedRank - bDelayedRank;
-    }
-
-    const overdueDiff = getOverdueStepCount(b) - getOverdueStepCount(a);
-    if (overdueDiff !== 0) {
-      return overdueDiff;
-    }
-
-    const aMinutes = a.minutesRemaining ?? Number.POSITIVE_INFINITY;
-    const bMinutes = b.minutesRemaining ?? Number.POSITIVE_INFINITY;
-    if (aMinutes !== bMinutes) {
-      return aMinutes - bMinutes;
-    }
-
-    const aProgress = selectMilestoneProgressPercent(a) ?? Number.POSITIVE_INFINITY;
-    const bProgress = selectMilestoneProgressPercent(b) ?? Number.POSITIVE_INFINITY;
-    if (aProgress !== bProgress) {
-      return aProgress - bProgress;
-    }
-
-    return asTimestamp(b.effectiveDate) - asTimestamp(a.effectiveDate);
   });
 }
 

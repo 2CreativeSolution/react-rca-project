@@ -305,6 +305,7 @@ export type DashboardOrder = {
   isActivationPending: boolean | null;
   millisecondsRemaining: number | null;
   minutesRemaining: number | null;
+  name: string | null;
   notes: string | null;
   orderId: string;
   status: string | null;
@@ -497,7 +498,7 @@ function toProductSummary(value: unknown): ProductSummary | null {
   }
 
   const id = asNonEmptyString(value.id) ?? undefined;
-  const imageUrl = asNonEmptyString(value.imageUrl) ?? undefined;
+  const imageUrl = asNonEmptyString(value.displayUrl) ?? asNonEmptyString(value.imageUrl) ?? undefined;
   const productCode = asNonEmptyString(value.productCode) ?? undefined;
   const isActive = typeof value.isActive === "boolean" ? value.isActive : undefined;
   const availabilityDate = asNonEmptyString(value.availabilityDate) ?? undefined;
@@ -580,6 +581,7 @@ function readImageUrl(value: unknown): string | null {
   }
 
   return asNonEmptyString(value.url)
+    ?? asNonEmptyString(value.displayUrl)
     ?? asNonEmptyString(value.imageUrl)
     ?? asNonEmptyString(value.secureUrl)
     ?? asNonEmptyString(value.src)
@@ -599,9 +601,14 @@ function toProductImageUrls(value: unknown, fallbackImageUrl?: string): string[]
     urls.push(candidate);
   };
 
+  add(asNonEmptyString(value.displayUrl));
   add(asNonEmptyString(value.imageUrl));
   add(asNonEmptyString(value.defaultImageUrl));
   add(asNonEmptyString(value.thumbnailUrl));
+
+  if (Array.isArray(value.displayUrls)) {
+    value.displayUrls.forEach((entry) => add(readImageUrl(entry)));
+  }
 
   if (Array.isArray(value.imageUrls)) {
     value.imageUrls.forEach((entry) => add(readImageUrl(entry)));
@@ -1191,6 +1198,7 @@ function toDashboardOrder(value: unknown): DashboardOrder | null {
     isActivationPending: asBooleanOrNull(value.isActivationPending),
     millisecondsRemaining: asNumberLike(value.millisecondsRemaining),
     minutesRemaining: asNumberLike(value.minutesRemaining),
+    name: asNonEmptyString(value.name),
     notes: asNonEmptyString(value.notes),
     orderId,
     status: asNonEmptyString(value.status),

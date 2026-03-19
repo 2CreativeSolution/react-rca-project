@@ -613,7 +613,7 @@ export function DashboardContent({
                     <Stack spacing={1.1}>
                       <Stack direction="row" justifyContent="space-between" spacing={1} alignItems="center">
                         <Typography variant="body2" fontWeight={700}>
-                          {highlight.order.orderId}
+                          {highlight.order.name ?? highlight.order.orderId}
                         </Typography>
                         <Stack direction="row" spacing={0.5} alignItems="center" sx={{ flexShrink: 0, minWidth: 0 }}>
                           {highlight.isAtRisk ? (

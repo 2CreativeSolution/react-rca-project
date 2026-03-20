@@ -265,6 +265,7 @@ export type DashboardSummary = {
 };
 
 export type DashboardOrderFulfillment = {
+  steps: DashboardOrderFulfillmentStep[];
   completedSteps: number | null;
   failedSteps: number | null;
   hasFallout: boolean | null;
@@ -278,6 +279,21 @@ export type DashboardOrderFulfillment = {
   totalSteps: number | null;
 };
 
+export type DashboardOrderFulfillmentStep = {
+  id: string | null;
+  name: string | null;
+  state: string | null;
+  stepType: string | null;
+  jeopardyStatus: string | null;
+  plannedCompletionDate: string | null;
+  actualStartDate: string | null;
+  actualCompletionDate: string | null;
+  retryAttempts: number | null;
+  executionMessage: string | null;
+  isVisibleByExternalUsers: boolean | null;
+  falloutQueueId: string | null;
+};
+
 export type DashboardOrder = {
   activationProgressPercent: number | null;
   activationTime: string | null;
@@ -289,6 +305,7 @@ export type DashboardOrder = {
   isActivationPending: boolean | null;
   millisecondsRemaining: number | null;
   minutesRemaining: number | null;
+  name: string | null;
   notes: string | null;
   orderId: string;
   status: string | null;
@@ -309,7 +326,11 @@ export type DashboardQuote = {
   totalAmount: number | null;
 };
 
-export type DashboardInsight = Record<string, unknown>;
+export type DashboardInsight = {
+  message: string | null;
+  priority: string | null;
+  type: string | null;
+};
 
 export type DashboardSnapshot = {
   userId: string | null;
@@ -349,6 +370,27 @@ function asNumberLike(value: unknown): number | null {
 
 function asBooleanOrNull(value: unknown): boolean | null {
   return typeof value === "boolean" ? value : null;
+}
+
+function toDashboardFulfillmentStep(value: unknown): DashboardOrderFulfillmentStep | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  return {
+    id: asNonEmptyString(value.id),
+    name: asNonEmptyString(value.name),
+    state: asNonEmptyString(value.state),
+    stepType: asNonEmptyString(value.stepType),
+    jeopardyStatus: asNonEmptyString(value.jeopardyStatus),
+    plannedCompletionDate: asNonEmptyString(value.plannedCompletionDate),
+    actualStartDate: asNonEmptyString(value.actualStartDate),
+    actualCompletionDate: asNonEmptyString(value.actualCompletionDate),
+    retryAttempts: asNumberLike(value.retryAttempts),
+    executionMessage: asNonEmptyString(value.executionMessage),
+    isVisibleByExternalUsers: asBooleanOrNull(value.isVisibleByExternalUsers),
+    falloutQueueId: asNonEmptyString(value.falloutQueueId),
+  };
 }
 
 function collectCandidateRecords(raw: unknown): UnknownRecord[] {
@@ -1116,6 +1158,11 @@ function toDashboardFulfillment(value: unknown): DashboardOrderFulfillment | nul
   }
 
   return {
+    steps: Array.isArray(value.steps)
+      ? value.steps
+          .map((step) => toDashboardFulfillmentStep(step))
+          .filter((step): step is DashboardOrderFulfillmentStep => Boolean(step))
+      : [],
     completedSteps: asNumberLike(value.completedSteps),
     failedSteps: asNumberLike(value.failedSteps),
     hasFallout: asBooleanOrNull(value.hasFallout),
@@ -1151,6 +1198,7 @@ function toDashboardOrder(value: unknown): DashboardOrder | null {
     isActivationPending: asBooleanOrNull(value.isActivationPending),
     millisecondsRemaining: asNumberLike(value.millisecondsRemaining),
     minutesRemaining: asNumberLike(value.minutesRemaining),
+    name: asNonEmptyString(value.name),
     notes: asNonEmptyString(value.notes),
     orderId,
     status: asNonEmptyString(value.status),
@@ -1199,7 +1247,19 @@ function toDashboardInsights(value: unknown): DashboardInsight[] {
     return [];
   }
 
-  return value.filter((entry): entry is DashboardInsight => isRecord(entry));
+  return value
+    .map((entry) => {
+      if (!isRecord(entry)) {
+        return null;
+      }
+
+      return {
+        message: asNonEmptyString(entry.message),
+        priority: asNonEmptyString(entry.priority),
+        type: asNonEmptyString(entry.type),
+      } satisfies DashboardInsight;
+    })
+    .filter((entry): entry is DashboardInsight => Boolean(entry));
 }
 
 function toDashboardOrderList(value: unknown): DashboardOrder[] {

@@ -1,9 +1,14 @@
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import ChevronLeftRoundedIcon from "@mui/icons-material/ChevronLeftRounded";
 import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
+import FiberManualRecordRoundedIcon from "@mui/icons-material/FiberManualRecordRounded";
+import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
+import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
+import TipsAndUpdatesRoundedIcon from "@mui/icons-material/TipsAndUpdatesRounded";
 import {
   Alert,
   Box,
+  Button,
   Chip,
   Grid,
   IconButton,
@@ -17,10 +22,18 @@ import {
 import { alpha } from "@mui/material/styles";
 import { keyframes } from "@mui/system";
 import { useEffect, useMemo, useState } from "react";
-import type { DashboardAsset, DashboardOrder, DashboardQuote, DashboardSummary } from "../../services/salesforceApi";
+import { PRODUCT_COPY } from "../../constants/productContent";
+import type {
+  DashboardAsset,
+  DashboardInsight,
+  DashboardOrder,
+  DashboardQuote,
+  DashboardSummary,
+} from "../../services/salesforceApi";
 import { formatCurrency, formatEta, mapStatusColor } from "./formatters";
 
 const ETA_TEXT_COLOR = "#0F4C81";
+const dashboardCopy = PRODUCT_COPY.dashboard;
 const insightsBorderSpark = keyframes`
   to {
     transform: rotate(1turn);
@@ -120,6 +133,71 @@ function KpiCard({ title, value, helper }: { title: string; value: string; helpe
   );
 }
 
+function normalizeText(value: string | null | undefined): string {
+  return value?.trim().toLowerCase() ?? "";
+}
+
+function isDelayedOrder(order: DashboardOrder): boolean {
+  return normalizeText(order.fulfillment?.state).includes("delay");
+}
+
+function isCompletedStatus(order: DashboardOrder): boolean {
+  const normalized = normalizeText(order.status ?? order.fulfillment?.state);
+  return (
+    normalized.includes("activat")
+    || normalized.includes("complet")
+    || normalized.includes("accept")
+    || normalized.includes("install")
+  );
+}
+
+function toProgressValue(value: number | null): number {
+  if (value === null) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function formatInsightPriority(priority: string | null): string {
+  if (!priority) {
+    return dashboardCopy.insightPriorityFallbackLabel;
+  }
+
+  return priority.charAt(0).toUpperCase() + priority.slice(1).toLowerCase();
+}
+
+function formatInsightType(type: string | null): string {
+  if (!type) {
+    return dashboardCopy.insightTypeFallbackLabel;
+  }
+
+  return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+}
+
+function mapInsightPriorityColor(priority: string | null): "success" | "info" | "warning" | "error" | "default" {
+  const normalized = normalizeText(priority);
+  if (normalized.includes("low")) {
+    return "success";
+  }
+  if (normalized.includes("medium")) {
+    return "warning";
+  }
+  if (normalized.includes("high") || normalized.includes("critical")) {
+    return "error";
+  }
+  return "info";
+}
+
+function getInsightTypeIcon(type: string | null) {
+  const normalized = normalizeText(type);
+  if (normalized.includes("trend")) {
+    return <TrendingUpRoundedIcon sx={{ fontSize: 16 }} />;
+  }
+
+  return <TipsAndUpdatesRoundedIcon sx={{ fontSize: 16 }} />;
+}
+
 type DashboardCarouselSlide = {
   id: "quotes" | "assets";
   title: string;
@@ -131,6 +209,12 @@ type DashboardCarouselSlide = {
     secondary: string;
     status: string | null;
   }>;
+};
+
+type ActivationHighlight = {
+  order: DashboardOrder;
+  isAtRisk: boolean;
+  progressPercent: number | null;
 };
 
 function QuotesAssetsCarousel({
@@ -341,11 +425,19 @@ export function DashboardHeaderActions({
   fetchedAtLabel,
   isRefreshing,
   disableRefresh,
+  showCreateQuote,
+  isCreatingQuote,
+  disableCreateQuote,
+  onCreateQuote,
   onRefresh,
 }: {
   fetchedAtLabel: string;
   isRefreshing: boolean;
   disableRefresh: boolean;
+  showCreateQuote: boolean;
+  isCreatingQuote: boolean;
+  disableCreateQuote: boolean;
+  onCreateQuote: () => Promise<void>;
   onRefresh: () => Promise<void>;
 }) {
   return (
@@ -360,17 +452,37 @@ export function DashboardHeaderActions({
       >
         <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2}>
           <Stack spacing={0.8}>
-            <Typography variant="h4">Executive Dashboard</Typography>
+            <Typography variant="h4">{dashboardCopy.title}</Typography>
             <Typography color="text.secondary" variant="body2">
-              High-level health across orders, quotes, assets, and account momentum.
+              {dashboardCopy.subtitle}
             </Typography>
             <Typography color="text.secondary" variant="caption">
-              Last updated: {fetchedAtLabel}
+              {dashboardCopy.lastUpdatedLabel}: {fetchedAtLabel}
             </Typography>
           </Stack>
 
           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-            <Tooltip title="Refresh">
+            {showCreateQuote ? (
+              <Button
+                variant="contained"
+                color="primary"
+                size="small"
+                disableElevation
+                onClick={onCreateQuote}
+                disabled={isCreatingQuote || disableCreateQuote}
+                sx={{
+                  height: 34,
+                  minWidth: 0,
+                  px: 1.25,
+                  borderRadius: 2,
+                  textTransform: "none",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {isCreatingQuote ? dashboardCopy.creatingQuoteLabel : dashboardCopy.createQuoteLabel}
+              </Button>
+            ) : null}
+            <Tooltip title={dashboardCopy.refreshTooltipLabel}>
               <span>
                 <IconButton
                   onClick={onRefresh}
@@ -453,13 +565,15 @@ export function DashboardKpiStrip({
 export function DashboardContent({
   orderHealth,
   activationHighlights,
+  insights,
   quotesTotal,
   assetsTotal,
   quotesPreview,
   assetsPreview,
 }: {
   orderHealth: { inProgressCount: number; activeCount: number; pastCount: number };
-  activationHighlights: DashboardOrder[];
+  activationHighlights: ActivationHighlight[];
+  insights: DashboardInsight[];
   quotesTotal: number;
   assetsTotal: number;
   quotesPreview: DashboardQuote[];
@@ -488,28 +602,95 @@ export function DashboardContent({
 
           <Paper variant="outlined" sx={{ borderRadius: 2, p: 2 }}>
             <Stack spacing={1.2}>
-              <Typography variant="h6">Upcoming Activation Milestones</Typography>
+              <Typography variant="h6">{dashboardCopy.milestonesTitle}</Typography>
               {activationHighlights.length === 0 ? (
-                <Typography color="text.secondary" variant="body2">No activation milestones are available.</Typography>
+                <Typography color="text.secondary" variant="body2">
+                  {dashboardCopy.milestonesEmptyMessage}
+                </Typography>
               ) : (
-                activationHighlights.map((order) => (
-                  <Paper key={order.orderId} variant="outlined" sx={{ borderRadius: 1.75, p: 1.2 }}>
-                    <Stack direction="row" justifyContent="space-between" spacing={1}>
-                      <Stack spacing={0.25}>
-                        <Typography variant="body2" fontWeight={700}>{order.orderId}</Typography>
-                        <Typography
-                          variant="caption"
-                          sx={{ color: ETA_TEXT_COLOR, fontWeight: 600 }}
-                        >
-                          ETA: {formatEta(order.hoursRemaining, order.minutesRemaining)}
+                activationHighlights.map((highlight) => (
+                  <Paper key={highlight.order.orderId} variant="outlined" sx={{ borderRadius: 1.75, p: 1.2 }}>
+                    <Stack spacing={1.1}>
+                      <Stack direction="row" justifyContent="space-between" spacing={1} alignItems="center">
+                        <Typography variant="body2" fontWeight={700}>
+                          {highlight.order.name ?? highlight.order.orderId}
+                        </Typography>
+                        <Stack direction="row" spacing={0.5} alignItems="center" sx={{ flexShrink: 0, minWidth: 0 }}>
+                          {highlight.isAtRisk ? (
+                            <Tooltip title={dashboardCopy.milestoneAtRiskLabel}>
+                              <FiberManualRecordRoundedIcon
+                                aria-label={dashboardCopy.milestoneAtRiskLabel}
+                                sx={{ fontSize: 12, display: "block", color: "error.main" }}
+                              />
+                            </Tooltip>
+                          ) : null}
+                          {isDelayedOrder(highlight.order) ? (
+                            <Tooltip title={dashboardCopy.milestoneDelayedLabel}>
+                              <FiberManualRecordRoundedIcon
+                                aria-label={dashboardCopy.milestoneDelayedLabel}
+                                sx={{ fontSize: 12, display: "block", color: "warning.main" }}
+                              />
+                            </Tooltip>
+                          ) : null}
+                          <Tooltip
+                            title={
+                              highlight.order.status
+                              ?? highlight.order.fulfillment?.state
+                              ?? dashboardCopy.milestoneStatusFallbackLabel
+                            }
+                          >
+                            {isCompletedStatus(highlight.order) ? (
+                              <CheckCircleRoundedIcon
+                                aria-label={dashboardCopy.milestoneStatusFallbackLabel}
+                                sx={{ fontSize: 18, display: "block", color: "success.main" }}
+                              />
+                            ) : (
+                              <FiberManualRecordRoundedIcon
+                                aria-label={dashboardCopy.milestoneStatusFallbackLabel}
+                                sx={{
+                                  fontSize: 12,
+                                  display: "block",
+                                  color: mapStatusColor(highlight.order.status ?? highlight.order.fulfillment?.state ?? null) === "warning"
+                                    ? "warning.main"
+                                    : mapStatusColor(highlight.order.status ?? highlight.order.fulfillment?.state ?? null) === "info"
+                                      ? "info.main"
+                                      : mapStatusColor(highlight.order.status ?? highlight.order.fulfillment?.state ?? null) === "success"
+                                        ? "success.main"
+                                        : "text.disabled",
+                                }}
+                              />
+                            )}
+                          </Tooltip>
+                        </Stack>
+                      </Stack>
+
+                      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.1} alignItems={{ sm: "center" }}>
+                        <Typography variant="caption" sx={{ color: ETA_TEXT_COLOR, fontWeight: 600 }}>
+                          {dashboardCopy.milestoneEtaLabel}:{" "}
+                          {formatEta(highlight.order.hoursRemaining, highlight.order.minutesRemaining)}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {dashboardCopy.milestoneProgressLabel}: {toProgressValue(highlight.progressPercent)}%
                         </Typography>
                       </Stack>
-                      <Chip
-                        color={mapStatusColor(order.fulfillment?.state ?? order.status)}
-                        label={order.fulfillment?.state ?? order.status ?? "Not available"}
-                        size="small"
-                        variant="outlined"
+
+                      <LinearProgress
+                        variant="determinate"
+                        value={toProgressValue(highlight.progressPercent)}
+                        sx={{ height: 6, borderRadius: 999 }}
                       />
+
+                      <Typography variant="caption" color="text.secondary">
+                        {dashboardCopy.milestoneSummaryLabel}:{" "}
+                        {highlight.order.fulfillment?.completedSteps ?? 0}/{highlight.order.fulfillment?.totalSteps ?? 0}
+                        {" • "}
+                        {dashboardCopy.milestoneInProgressLabel}: {highlight.order.fulfillment?.inProgressSteps ?? 0}
+                        {" • "}
+                        {dashboardCopy.milestoneFailedLabel}: {highlight.order.fulfillment?.failedSteps ?? 0}
+                        {" • "}
+                        {dashboardCopy.milestonePlanAgeLabel}:{" "}
+                        {highlight.order.fulfillment?.planAgeHours ?? dashboardCopy.milestonePlanAgeFallback}
+                      </Typography>
                     </Stack>
                   </Paper>
                 ))
@@ -559,10 +740,50 @@ export function DashboardContent({
             })}
           >
             <Stack spacing={1.2} sx={{ position: "relative", zIndex: 2 }}>
-              <Typography variant="h6">AI Insights</Typography>
-              <Typography color="text.secondary" variant="body2">
-                Coming soon.
-              </Typography>
+              <Typography variant="h6">{dashboardCopy.aiInsightsTitle}</Typography>
+              {insights.length === 0 ? (
+                <Typography color="text.secondary" variant="body2">
+                  {dashboardCopy.aiInsightsEmptyMessage}
+                </Typography>
+              ) : (
+                insights.slice(0, 3).map((insight, index) => (
+                  <Paper
+                    key={`${insight.type ?? "insight"}-${index}`}
+                    variant="outlined"
+                    sx={(theme) => ({
+                      borderRadius: 1.5,
+                      p: 1.1,
+                      bgcolor: "background.paper",
+                      borderColor: alpha(theme.palette.info.main, 0.22),
+                    })}
+                  >
+                    <Stack spacing={0.75}>
+                      <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+                        <Chip
+                          icon={getInsightTypeIcon(insight.type)}
+                          label={formatInsightType(insight.type)}
+                          size="small"
+                          variant="outlined"
+                          sx={{
+                            height: 22,
+                            "& .MuiChip-label": { px: 0.75, fontSize: "0.72rem", fontWeight: 600 },
+                          }}
+                        />
+                        <Chip
+                          size="small"
+                          color={mapInsightPriorityColor(insight.priority)}
+                          label={`${formatInsightPriority(insight.priority)} priority`}
+                          variant="filled"
+                          sx={{ height: 22, fontWeight: 600 }}
+                        />
+                      </Stack>
+                      <Typography variant="body2" fontWeight={600}>
+                        {insight.message ?? dashboardCopy.aiInsightMessageFallback}
+                      </Typography>
+                    </Stack>
+                  </Paper>
+                ))
+              )}
             </Stack>
           </Paper>
         </Stack>
